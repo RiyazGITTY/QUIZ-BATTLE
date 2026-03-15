@@ -81,6 +81,7 @@ input[type=text]::placeholder{color:var(--text3);font-weight:400;}
 .lb-rank-cell{font-family:'Fredoka One',cursive;font-size:18px;color:var(--text3);width:30px;}
 .lb-rank-cell.r1{color:#ffd700;}.lb-rank-cell.r2{color:#c0c0c0;}.lb-rank-cell.r3{color:#cd7f32;}
 .answer-reveal{margin-top:10px;padding:10px 14px;background:rgba(29,179,126,.15);border:1px solid rgba(29,179,126,.4);border-radius:var(--rs);font-size:15px;font-weight:700;color:#5fdbaa;display:none;}
+@keyframes cdrop{to{top:110vh;transform:rotate(720deg) translateX(60px);}}
 .err-msg{background:rgba(232,68,90,.15);border:1px solid rgba(232,68,90,.4);border-radius:var(--rs);padding:10px 14px;font-size:14px;color:#ff8fa0;margin-bottom:1rem;display:none;}
 </style>
 </head>
@@ -153,16 +154,32 @@ input[type=text]::placeholder{color:var(--text3);font-weight:400;}
 
 <!-- RESULTS -->
 <div class="screen" id="s-results">
-  <div class="result-hero">
-    <div class="result-trophy" id="res-trophy">🏆</div>
-    <div style="font-size:12px;color:var(--text3);letter-spacing:2px;margin-bottom:4px;" id="res-label">WINNER</div>
-    <div class="result-name" id="res-winner">—</div>
-    <div style="font-size:14px;color:var(--text2);margin-top:4px;" id="res-pts"></div>
+
+  <!-- MY RESULT CARD -->
+  <div id="my-result-card" style="text-align:center;padding:1.5rem 1rem 1rem;">
+    <div id="res-my-trophy" style="font-size:72px;animation:bounce 1s infinite alternate;display:block;margin-bottom:.5rem;">🏆</div>
+    <div id="res-my-rank-label" style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">YOUR RANK / ترتيبك</div>
+    <div id="res-my-rank" style="font-family:'Fredoka One',cursive;font-size:56px;line-height:1;background:linear-gradient(135deg,#ffd700,#f5a623);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—</div>
+    <div id="res-my-name" style="font-size:18px;font-weight:800;color:var(--text);margin-top:6px;"></div>
+    <div id="res-my-score-label" style="font-size:14px;color:var(--text2);margin-top:4px;"></div>
+    <div id="res-my-msg" style="font-size:15px;font-weight:700;margin-top:10px;padding:8px 16px;border-radius:20px;display:inline-block;"></div>
   </div>
+
+  <!-- LEADERBOARD -->
   <div class="card">
-    <div class="card-title">Leaderboard / الترتيب</div>
+    <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1rem;">
+      🏆 Final Leaderboard / الترتيب النهائي
+    </div>
     <div id="lb-list"></div>
   </div>
+
+  <!-- WINNER SPOTLIGHT -->
+  <div class="card" id="winner-spotlight" style="text-align:center;background:rgba(255,215,0,.06);border-color:rgba(255,215,0,.3);">
+    <div style="font-size:11px;font-weight:800;color:#b8860b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.5rem;">🌟 Winner / الفائز</div>
+    <div id="res-winner" style="font-family:'Fredoka One',cursive;font-size:28px;background:linear-gradient(135deg,#ffd700,#f5a623);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></div>
+    <div id="res-pts" style="font-size:13px;color:var(--text2);margin-top:4px;font-weight:700;"></div>
+  </div>
+
 </div>
 
 </div>
@@ -321,22 +338,93 @@ socket.on('state_update', ({ players }) => {
 });
 
 socket.on('game_over', ({ leaderboard }) => {
-  if (leaderboard.length > 0) {
-    const winner = leaderboard[0];
-    const isMe = winner.name === myName;
-    document.getElementById('res-trophy').textContent = isMe ? '🏆' : '🎮';
-    document.getElementById('res-label').textContent = isMe ? 'YOU WIN! / أنت الفائز!' : 'WINNER / الفائز';
-    document.getElementById('res-winner').textContent = winner.name;
-    document.getElementById('res-pts').textContent = `${winner.score} points / نقطة`;
-    document.getElementById('lb-list').innerHTML = leaderboard.map((p,i) =>
-      `<div class="lb-row">
-        <span class="lb-rank-cell r${i+1}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</span>
-        <span style="font-weight:700;flex:1;padding:0 8px;${p.name===myName?'color:#5fdbaa':''}">${p.name}${p.name===myName?' (You)':''}</span>
-        <span style="font-family:'Fredoka One',cursive;font-size:18px;color:var(--blue);">${p.score}</span>
-      </div>`).join('');
+  if (leaderboard.length === 0) { showScreen('s-results'); return; }
+
+  const winner = leaderboard[0];
+  const myRankIndex = leaderboard.findIndex(p => p.name === myName);
+  const myRank = myRankIndex + 1;
+  const myFinalScore = myRankIndex >= 0 ? leaderboard[myRankIndex].score : myScore;
+  const isWinner = myRank === 1;
+
+  // Rank medals
+  const rankEmoji = ['🥇','🥈','🥉'];
+  const rankColors = [
+    'linear-gradient(135deg,#ffd700,#f5a623)',
+    'linear-gradient(135deg,#c0c0c0,#a0a0a0)',
+    'linear-gradient(135deg,#cd7f32,#a0522d)',
+  ];
+  const messages = {
+    1: ['🎉 YOU WON! أنت الفائز!', 'rgba(29,179,126,.2)', '#5fdbaa'],
+    2: ['👏 2nd Place! المركز الثاني!', 'rgba(192,192,192,.15)', '#c0c0c0'],
+    3: ['👍 3rd Place! المركز الثالث!', 'rgba(205,127,50,.15)', '#cd7f32'],
+  };
+
+  // My result card
+  const trophy = document.getElementById('res-my-trophy');
+  const rankEl = document.getElementById('res-my-rank');
+  const nameEl = document.getElementById('res-my-name');
+  const scoreEl = document.getElementById('res-my-score-label');
+  const msgEl = document.getElementById('res-my-msg');
+  const rankLabel = document.getElementById('res-my-rank-label');
+
+  if (myRank > 0) {
+    trophy.textContent = rankEmoji[myRank-1] || '🎮';
+    rankEl.textContent = myRank <= 3 ? rankEmoji[myRank-1] : '#' + myRank;
+    rankEl.style.background = rankColors[myRank-1] || 'none';
+    rankEl.style.webkitBackgroundClip = myRank <= 3 ? 'text' : 'unset';
+    rankEl.style.webkitTextFillColor = myRank <= 3 ? 'transparent' : 'var(--text2)';
+    rankEl.style.fontSize = myRank <= 3 ? '56px' : '40px';
+    nameEl.textContent = myName;
+    scoreEl.textContent = myFinalScore + ' points / نقطة';
+    if (messages[myRank]) {
+      msgEl.textContent = messages[myRank][0];
+      msgEl.style.background = messages[myRank][1];
+      msgEl.style.color = messages[myRank][2];
+    } else {
+      msgEl.textContent = 'Great effort! / عمل رائع!';
+      msgEl.style.background = 'rgba(58,142,246,.15)';
+      msgEl.style.color = '#7fb8ff';
+    }
+    rankLabel.textContent = isWinner ? 'YOU WIN! / أنت الفائز!' : 'YOUR RANK / ترتيبك';
+  } else {
+    trophy.textContent = '🎮';
+    nameEl.textContent = myName;
+    scoreEl.textContent = 'Thanks for playing! / شكراً للمشاركة!';
+    msgEl.textContent = 'Better luck next time! / حظاً أوفر في المرة القادمة!';
+    msgEl.style.background = 'rgba(58,142,246,.15)';
+    msgEl.style.color = '#7fb8ff';
   }
+
+  // Winner spotlight
+  document.getElementById('res-winner').textContent = winner.name;
+  document.getElementById('res-pts').textContent = winner.score + ' points / نقطة';
+
+  // Leaderboard
+  document.getElementById('lb-list').innerHTML = leaderboard.map((p, i) => {
+    const isMe = p.name === myName;
+    const rank = rankEmoji[i] || (i+1);
+    return `<div class="lb-row" style="${isMe ? 'background:rgba(29,179,126,.08);border-radius:8px;padding:2px 6px;' : ''}">
+      <span class="lb-rank-cell r${i+1}">${rank}</span>
+      <span style="font-weight:${isMe?800:700};flex:1;padding:0 8px;color:${isMe?'#5fdbaa':'var(--text)'}">
+        ${p.name}${isMe ? ' 👈 You' : ''}
+      </span>
+      <span style="font-family:'Fredoka One',cursive;font-size:18px;color:${isMe?'#5fdbaa':'var(--blue)'};">${p.score}</span>
+    </div>`;
+  }).join('');
+
   showScreen('s-results');
+  if (isWinner) launchConfetti();
 });
+
+function launchConfetti() {
+  const colors = ['#ffd700','#3a8ef6','#1db37e','#e8445a','#7c5cbf','#f5a623'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;width:10px;height:10px;top:-20px;left:${Math.random()*100}vw;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:2px;pointer-events:none;z-index:999;animation:cdrop ${2+Math.random()}s ease-in forwards;animation-delay:${Math.random()*1.5}s;transform:rotate(${Math.random()*360}deg);`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+}
 
 socket.on('lobby_reset', () => {
   myScore = 0; myLives = 3; buzzed = false; answered = false;
