@@ -234,6 +234,10 @@ let customQuestions = {};
 let defaultCounts = {};
 let showAll = false;
 
+// Check auth
+if (sessionStorage.getItem('teacher_auth') !== '1') {
+  window.location.href = 'teacher.html';
+}
 socket.emit('teacher_join'); socket.emit('get_custom_questions');
 
 socket.on('custom_questions_update', (data) => {

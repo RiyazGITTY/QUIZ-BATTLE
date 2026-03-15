@@ -384,6 +384,18 @@ io.on('connection', (socket) => {
   });
 });
 
+// ── Teacher Auth ─────────────────────────────────────────────
+const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || 'teacher123';
+app.use(express.json());
+app.post('/auth', (req, res) => {
+  const { password } = req.body;
+  if (password === TEACHER_PASSWORD) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, message: 'Wrong password' });
+  }
+});
+
 app.get('/qr', async (req, res) => {
   // Auto-detect host from request headers — works on Railway, local, everywhere
   const proto = req.headers['x-forwarded-proto'] || 'http';

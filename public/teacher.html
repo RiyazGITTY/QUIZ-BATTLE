@@ -103,6 +103,25 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
 <body>
 <div class="app">
 
+<!-- LOGIN -->
+<div class="screen active" id="s-login">
+  <div class="logo" style="margin-top:3rem;">
+    <div class="logo-title">Quiz Battle</div>
+    <div class="logo-sub">Teacher Login · دخول المعلم</div>
+  </div>
+  <div class="card" style="max-width:380px;margin:0 auto;">
+    <div class="card-title">Enter Password / أدخل كلمة المرور</div>
+    <input type="password" id="pwd-input" placeholder="Password / كلمة المرور"
+      style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:14px 16px;color:var(--text);font-family:Nunito,sans-serif;font-size:16px;outline:none;margin-bottom:1rem;"
+      onkeydown="if(event.key==='Enter')login()">
+    <div id="pwd-err" style="color:#e8445a;font-size:13px;font-weight:700;margin-bottom:.75rem;display:none;">
+      ❌ Wrong password! / كلمة المرور خاطئة!
+    </div>
+    <button class="btn btn-primary btn-full" onclick="login()">🔓 Login / دخول</button>
+    <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:.75rem;">Default password: teacher123</p>
+  </div>
+</div>
+
 <!-- LOBBY -->
 <div class="screen active" id="s-lobby">
   <div class="logo">
@@ -216,13 +235,41 @@ let selectedGame = 'vocab';
 let buzzedSocketId = null;
 let timerMax = 15;
 
-socket.emit('teacher_join');
-
+// ── Auth ─────────────────────────────────────────────────────
+function login() {
+  const pwd = document.getElementById('pwd-input').value;
+  fetch('/auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pwd })
+  }).then(r => r.json()).then(d => {
+    if (d.success) {
+      sessionStorage.setItem('teacher_auth', '1');
+      showScreen('s-lobby');
+      initDashboard();
+    } else {
+      document.getElementById('pwd-err').style.display = '';
+      document.getElementById('pwd-input').value = '';
+      document.getElementById('pwd-input').focus();
+    }
+  }).catch(() => {
+    document.getElementById('pwd-err').style.display = '';
+  });
+}
+// Load QR
+function initDashboard() {
+  socket.emit('teacher_join');
 // Load QR
 fetch('/qr').then(r=>r.json()).then(d=>{
   document.getElementById('qr-img').src = d.qr;
   document.getElementById('qr-url').textContent = d.url;
 });
+}
+// Auto-login if already authenticated this session
+if (sessionStorage.getItem('teacher_auth') === '1') {
+  showScreen('s-lobby');
+  initDashboard();
+}
 
 function selectGame(g, el) {
   selectedGame = g;
