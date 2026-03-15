@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Battle — Teacher</title>
+<script src="/socket.io/socket.io.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green:#1db37e;--green-d:#0f8f5e;--red:#e8445a;--red-d:#b83347;
+  --blue:#3a8ef6;--blue-d:#1c6fd4;--amber:#f5a623;--purple:#7c5cbf;
+  --bg:#0f1923;--bg2:#172230;--bg3:#1f2e3e;--card:#1c2d3f;
+  --border:#2e4058;--text:#e8f0fa;--text2:#8ba3be;--text3:#5a7a9a;
+  --r:14px;--rs:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(30,100,180,.12),transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(124,92,191,.1),transparent 60%);pointer-events:none;}
+.app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:1.5rem 1rem;}
+.screen{display:none;animation:fi .3s ease;}
+.screen.active{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.logo{text-align:center;margin-bottom:1.5rem;}
+.logo-title{font-family:'Fredoka One',cursive;font-size:38px;background:linear-gradient(135deg,#3a8ef6,#7c5cbf,#1db37e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.logo-sub{font-size:12px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem 1.5rem;margin-bottom:1rem;}
+.card-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1rem;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border-radius:var(--rs);border:none;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;}
+.btn:active{transform:scale(.97);}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+.btn-primary{background:var(--green);color:#fff;} .btn-primary:hover{background:var(--green-d);}
+.btn-danger{background:var(--red);color:#fff;} .btn-danger:hover{background:var(--red-d);}
+.btn-blue{background:var(--blue);color:#fff;} .btn-blue:hover{background:var(--blue-d);}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border);} .btn-ghost:hover{background:var(--border);}
+.btn-amber{background:var(--amber);color:#fff;}
+.btn-full{width:100%;padding:15px;font-size:16px;border-radius:var(--r);}
+.game-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:1rem;}
+@media(max-width:500px){.game-grid{grid-template-columns:1fr;}}
+.game-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer;transition:all .2s;text-align:center;}
+.game-card:hover{border-color:var(--blue);transform:translateY(-2px);}
+.game-card.selected{border-color:var(--green);background:rgba(29,179,126,.1);}
+.game-icon{font-size:32px;margin-bottom:8px;}
+.game-name{font-weight:800;font-size:15px;color:var(--text);}
+.game-name-ar{font-size:12px;color:var(--text3);margin-top:2px;}
+.qr-wrap{text-align:center;padding:1rem 0;}
+.qr-wrap img{border-radius:12px;border:4px solid #fff;max-width:220px;}
+.qr-url{font-size:13px;color:var(--text3);margin-top:10px;word-break:break-all;}
+.player-chips{display:flex;flex-wrap:wrap;gap:8px;min-height:40px;}
+.chip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--text2);}
+.chip.active{border-color:var(--green);color:#5fdbaa;}
+.setting-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.setting-label{font-size:13px;color:var(--text2);min-width:110px;font-weight:600;}
+.setting-row input[type=range]{flex:1;accent-color:var(--blue);}
+.setting-val{font-size:15px;font-weight:800;color:var(--text);min-width:30px;text-align:right;}
+.player-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1rem;}
+.player-tile{background:var(--bg3);border:2px solid var(--border);border-radius:var(--r);padding:.9rem .75rem;text-align:center;transition:all .2s;}
+.player-tile.buzzed{border-color:var(--green);background:rgba(29,179,126,.12);}
+.player-tile.eliminated{opacity:.3;border-color:var(--bg3);}
+.tile-name{font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tile-score{font-family:'Fredoka One',cursive;font-size:28px;color:var(--text);line-height:1;}
+.tile-lives{font-size:12px;margin-top:3px;letter-spacing:2px;}
+.q-box{background:var(--bg2);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem;text-align:center;}
+.q-badge{display:inline-block;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;}
+.q-badge.vocab{background:rgba(58,142,246,.2);color:#7fb8ff;}
+.q-badge.spelling{background:rgba(124,92,191,.2);color:#b89fff;}
+.q-badge.fillblank{background:rgba(245,166,35,.2);color:#ffc96b;}
+.q-badge.scramble{background:rgba(29,179,126,.2);color:#5fdbaa;}
+.q-text{font-size:19px;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:6px;}
+.q-ar{font-size:14px;color:var(--text3);direction:rtl;}
+.q-answer-box{margin-top:12px;padding:10px 16px;background:rgba(29,179,126,.15);border:1px solid rgba(29,179,126,.4);border-radius:var(--rs);font-size:16px;font-weight:700;color:#5fdbaa;display:none;}
+.timer-wrap{margin-bottom:1rem;}
+.timer-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.timer-num{font-family:'Fredoka One',cursive;font-size:26px;color:var(--text);}
+.timer-num.urgent{color:var(--red);animation:pulse .5s infinite alternate;}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.08)}}
+.timer-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;}
+.timer-fill{height:100%;background:var(--green);border-radius:4px;transition:width .9s linear,background .3s;}
+.timer-fill.urgent{background:var(--red);}
+.status{text-align:center;font-size:15px;font-weight:700;color:var(--text2);min-height:24px;margin-bottom:.75rem;}
+.ctrl{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;}
+.ctrl .btn{flex:1;min-width:110px;}
+.lb-table{width:100%;border-collapse:collapse;}
+.lb-table tr{border-bottom:1px solid var(--border);}
+.lb-table tr:last-child{border-bottom:none;}
+.lb-table td{padding:10px 8px;font-size:14px;}
+.lb-rank{font-family:'Fredoka One',cursive;font-size:20px;color:var(--text3);width:36px;}
+.lb-rank.r1{color:#ffd700;} .lb-rank.r2{color:#c0c0c0;} .lb-rank.r3{color:#cd7f32;}
+.lb-name{font-weight:700;color:var(--text);}
+.lb-score{text-align:right;font-family:'Fredoka One',cursive;font-size:20px;color:var(--blue);}
+.winner-hero{text-align:center;padding:2rem 1rem 1rem;}
+.trophy{font-size:60px;display:block;animation:bounce 1s infinite alternate;}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+.winner-name{font-family:'Fredoka One',cursive;font-size:36px;background:linear-gradient(135deg,#ffd700,#f5a623);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.winner-pts{font-size:15px;color:var(--text2);font-weight:700;margin-top:4px;}
+.confetti-piece{position:fixed;width:10px;height:10px;top:-20px;pointer-events:none;z-index:999;border-radius:2px;animation:cdrop 2.5s ease-in forwards;}
+@keyframes cdrop{to{top:110vh;transform:rotate(720deg) translateX(80px);}}
+hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:600px){.two-col{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- LOBBY -->
+<div class="screen active" id="s-lobby">
+  <div class="logo">
+    <div class="logo-title">Quiz Battle</div>
+    <div class="logo-sub">Teacher Dashboard · لوحة المعلم</div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">QR Code for Students / رمز الاستجابة</div>
+      <div class="qr-wrap">
+        <img id="qr-img" src="" alt="Loading QR...">
+        <div class="qr-url" id="qr-url">Loading...</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Students Joined (max 30) / الطلاب المنضمون <span id="player-count">(0)</span></div>
+        <div class="player-chips" id="lobby-chips">
+          <span style="font-size:13px;color:var(--text3);">Waiting for students... / في انتظار الطلاب...</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Settings / الإعدادات</div>
+        <div class="setting-row">
+          <span class="setting-label">Timer / المؤقت</span>
+          <input type="range" min="10" max="30" value="15" step="5" id="timer-val" oninput="document.getElementById('timer-out').textContent=this.value+'s'">
+          <span class="setting-val" id="timer-out">15s</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Choose Game / اختر اللعبة</div>
+    <div class="game-grid">
+      <div class="game-card selected" onclick="selectGame('vocab',this)">
+        <div class="game-icon">📚</div>
+        <div class="game-name">Vocabulary Quiz</div>
+        <div class="game-name-ar">مسابقة المفردات</div>
+      </div>
+      <div class="game-card" onclick="selectGame('spelling',this)">
+        <div class="game-icon">🔤</div>
+        <div class="game-name">Spelling Bee</div>
+        <div class="game-name-ar">مسابقة التهجئة</div>
+      </div>
+      <div class="game-card" onclick="selectGame('fillblank',this)">
+        <div class="game-icon">✏️</div>
+        <div class="game-name">Fill in the Blank</div>
+        <div class="game-name-ar">أكمل الفراغ</div>
+      </div>
+      <div class="game-card" onclick="selectGame('scramble',this)">
+        <div class="game-icon">🔀</div>
+        <div class="game-name">Word Scramble</div>
+        <div class="game-name-ar">ترتيب الكلمات</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn btn-primary btn-full" id="start-btn" onclick="startGame()" disabled>▶ Start Game / ابدأ اللعبة</button>
+<button class="btn btn-ghost" style="width:100%;margin-top:.5rem;" onclick="window.location.href='manage.html'">✏️ Manage Questions / إدارة الأسئلة</button>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="s-game">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+    <div style="font-family:'Fredoka One',cursive;font-size:22px;" id="game-title">Quiz Battle</div>
+    <div style="font-size:13px;color:var(--text3);" id="q-progress">Q 0/10</div>
+  </div>
+  <div class="player-grid" id="player-grid"></div>
+  <div class="q-box">
+    <span class="q-badge vocab" id="q-badge">Vocabulary</span>
+    <div class="q-text" id="q-text">Press "Next Question" to begin!</div>
+    <div class="q-ar" id="q-ar"></div>
+    <div class="q-answer-box" id="q-answer"></div>
+  </div>
+  <div class="timer-wrap" id="timer-wrap" style="display:none;">
+    <div class="timer-top">
+      <span style="font-size:12px;color:var(--text3);font-weight:700;">TIME / الوقت</span>
+      <span class="timer-num" id="timer-num">15</span>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%;"></div></div>
+  </div>
+  <div class="status" id="status-msg">Ready! / جاهز!</div>
+  <div class="ctrl">
+    <button class="btn btn-blue" id="btn-next" onclick="nextQ()">Next Question →</button>
+    <button class="btn btn-ghost" id="btn-reveal" onclick="revealAns()" style="display:none;">Reveal Answer</button>
+    <button class="btn btn-primary" id="btn-correct" onclick="markCorrect()" style="display:none;">✓ Correct +10</button>
+    <button class="btn btn-danger" id="btn-wrong" onclick="markWrong()" style="display:none;">✗ Wrong −3</button>
+  </div>
+  <hr>
+  <button class="btn btn-ghost" style="width:100%;" onclick="socket.emit('end_game')">End Game / إنهاء اللعبة</button>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="s-results">
+  <div class="winner-hero">
+    <span class="trophy">🏆</span>
+    <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Winner / الفائز</div>
+    <div class="winner-name" id="winner-name">—</div>
+    <div class="winner-pts" id="winner-pts"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Final Leaderboard / الترتيب النهائي</div>
+    <table class="lb-table" id="lb-table"></table>
+  </div>
+  <button class="btn btn-primary btn-full" style="margin-top:1rem;" onclick="socket.emit('reset_lobby')">🔄 Play Again / العب مجدداً</button>
+</div>
+
+</div>
+<script>
+const socket = io();
+let selectedGame = 'vocab';
+let buzzedSocketId = null;
+let timerMax = 15;
+
+socket.emit('teacher_join');
+
+// Load QR
+fetch('/qr').then(r=>r.json()).then(d=>{
+  document.getElementById('qr-img').src = d.qr;
+  document.getElementById('qr-url').textContent = d.url;
+});
+
+function selectGame(g, el) {
+  selectedGame = g;
+  document.querySelectorAll('.game-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function startGame() {
+  timerMax = parseInt(document.getElementById('timer-val').value);
+  socket.emit('start_game', { game: selectedGame, timerMax, questionCount: 10 });
+}
+
+function nextQ() { socket.emit('next_question'); }
+function revealAns() { socket.emit('reveal_answer'); }
+function markCorrect() { socket.emit('mark_correct'); }
+function markWrong() { socket.emit('mark_wrong', { socketId: buzzedSocketId }); }
+
+socket.on('player_list', (names) => {
+  const chips = document.getElementById('lobby-chips');
+  document.getElementById('player-count').textContent = `(${names.length})`;
+  document.getElementById('start-btn').disabled = names.length < 1;
+  if (names.length === 0) {
+    chips.innerHTML = '<span style="font-size:13px;color:var(--text3);">Waiting for students... / في انتظار الطلاب...</span>';
+  } else {
+    chips.innerHTML = names.map(n => `<span class="chip active">${n}</span>`).join('');
+  }
+});
+
+socket.on('game_started', ({ game }) => {
+  const names = { vocab:'Vocabulary Quiz',spelling:'Spelling Bee',fillblank:'Fill in the Blank',scramble:'Word Scramble' };
+  document.getElementById('game-title').textContent = names[game] || 'Quiz Battle';
+  const badge = document.getElementById('q-badge');
+  badge.textContent = names[game]; badge.className = `q-badge ${game}`;
+  document.getElementById('q-text').textContent = 'Press "Next Question" to begin!';
+  document.getElementById('q-ar').textContent = '';
+  document.getElementById('q-answer').style.display = 'none';
+  document.getElementById('timer-wrap').style.display = 'none';
+  document.getElementById('btn-next').style.display = '';
+  document.getElementById('btn-reveal').style.display = 'none';
+  document.getElementById('btn-correct').style.display = 'none';
+  document.getElementById('btn-wrong').style.display = 'none';
+  setStatus('Game started! Press Next Question / بدأت اللعبة!');
+  showScreen('s-game');
+});
+
+socket.on('question', (q) => {
+  document.getElementById('q-answer').style.display = 'none';
+  document.getElementById('btn-next').style.display = 'none';
+  document.getElementById('btn-reveal').style.display = '';
+  document.getElementById('btn-correct').style.display = 'none';
+  document.getElementById('btn-wrong').style.display = 'none';
+  document.getElementById('timer-wrap').style.display = '';
+  buzzedSocketId = null;
+  document.getElementById('q-progress').textContent = `Q ${q.index+1}/${q.total}`;
+
+  if (q.game === 'vocab') {
+    document.getElementById('q-text').textContent = q.question;
+    document.getElementById('q-ar').textContent = q.questionAr;
+    setStatus('Who buzzes first? / من يضغط أولاً؟ 🔔');
+  } else if (q.game === 'spelling') {
+    document.getElementById('q-text').textContent = `Hint: ${q.hint}`;
+    document.getElementById('q-ar').textContent = `تلميح: ${q.hintAr}`;
+    setStatus('Students are typing their spelling... / الطلاب يكتبون...');
+  } else if (q.game === 'fillblank') {
+    document.getElementById('q-text').textContent = q.question;
+    document.getElementById('q-ar').textContent = q.questionAr;
+    setStatus('Students are choosing answers... / الطلاب يختارون...');
+  } else if (q.game === 'scramble') {
+    document.getElementById('q-text').textContent = `Unscramble: ${q.scrambled}`;
+    document.getElementById('q-ar').textContent = `تلميح: ${q.hintAr}`;
+    setStatus('Students are unscrambling... / الطلاب يرتبون الكلمة...');
+  }
+});
+
+socket.on('timer', ({ left, max }) => {
+  timerMax = max;
+  document.getElementById('timer-num').textContent = left;
+  document.getElementById('timer-fill').style.width = Math.max(0, (left/max)*100) + '%';
+  const urgent = left <= 5;
+  document.getElementById('timer-num').className = 'timer-num' + (urgent ? ' urgent' : '');
+  document.getElementById('timer-fill').className = 'timer-fill' + (urgent ? ' urgent' : '');
+});
+
+socket.on('time_up', () => {
+  setStatus('⏰ Time\'s up! / انتهى الوقت!');
+  document.getElementById('btn-reveal').style.display = '';
+  document.getElementById('btn-next').style.display = '';
+  document.getElementById('btn-correct').style.display = 'none';
+  document.getElementById('btn-wrong').style.display = 'none';
+});
+
+socket.on('buzzed', ({ name, socketId }) => {
+  buzzedSocketId = socketId;
+  setStatus(`🔔 ${name} buzzed in! / ضغط ${name}!`);
+  document.getElementById('btn-correct').style.display = '';
+  document.getElementById('btn-wrong').style.display = '';
+  document.getElementById('btn-reveal').style.display = '';
+  document.getElementById('btn-next').style.display = 'none';
+});
+
+socket.on('correct_answer', ({ name, answer }) => {
+  setStatus(`🎉 ${name} answered correctly! / أجاب ${name} بشكل صحيح!`);
+  document.getElementById('q-answer').textContent = '✓ Answer: ' + answer;
+  document.getElementById('q-answer').style.display = '';
+  document.getElementById('btn-next').style.display = '';
+  document.getElementById('btn-correct').style.display = 'none';
+  document.getElementById('btn-wrong').style.display = 'none';
+});
+
+socket.on('wrong_buzz', ({ name }) => {
+  setStatus(`💔 ${name} was wrong! Others can buzz. / ${name} أخطأ!`);
+  document.getElementById('btn-correct').style.display = 'none';
+  document.getElementById('btn-wrong').style.display = 'none';
+});
+
+socket.on('answer_revealed', ({ answer }) => {
+  document.getElementById('q-answer').textContent = '✓ Answer: ' + answer;
+  document.getElementById('q-answer').style.display = '';
+  document.getElementById('btn-next').style.display = '';
+  document.getElementById('btn-correct').style.display = 'none';
+  document.getElementById('btn-wrong').style.display = 'none';
+});
+
+socket.on('player_eliminated', ({ name }) => {
+  setStatus(`💀 ${name} is eliminated! / ${name} خرج من اللعبة!`);
+});
+
+socket.on('state_update', ({ players, currentQ, total, buzzed }) => {
+  const grid = document.getElementById('player-grid');
+  if (!players || players.length === 0) return;
+  grid.innerHTML = players.map(p => `
+    <div class="player-tile ${buzzed===p.name?'buzzed':''} ${!p.active?'eliminated':''}">
+      <div class="tile-name">${p.name}</div>
+      <div class="tile-score">${p.score}</div>
+      <div class="tile-lives">${p.active ? '❤️'.repeat(Math.max(0,p.lives)) : '💀'}</div>
+    </div>`).join('');
+  if (currentQ >= 0) document.getElementById('q-progress').textContent = `Q ${currentQ+1}/${total}`;
+});
+
+socket.on('game_over', ({ leaderboard }) => {
+  if (leaderboard.length > 0) {
+    document.getElementById('winner-name').textContent = leaderboard[0].name;
+    document.getElementById('winner-pts').textContent = leaderboard[0].score + ' points / نقطة';
+    document.getElementById('lb-table').innerHTML = leaderboard.map((p,i) =>
+      `<tr><td class="lb-rank r${i+1}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</td>
+      <td class="lb-name">${p.name}</td><td class="lb-score">${p.score}</td></tr>`).join('');
+  }
+  showScreen('s-results');
+  launchConfetti();
+});
+
+socket.on('lobby_reset', () => {
+  document.getElementById('lobby-chips').innerHTML = '<span style="font-size:13px;color:var(--text3);">Waiting for students...</span>';
+  document.getElementById('player-count').textContent = '(0)';
+  document.getElementById('start-btn').disabled = true;
+  showScreen('s-lobby');
+});
+
+function setStatus(msg) { document.getElementById('status-msg').textContent = msg; }
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function launchConfetti() {
+  const colors = ['#ffd700','#3a8ef6','#1db37e','#e8445a','#7c5cbf','#f5a623'];
+  for (let i=0;i<80;i++) {
+    const el = document.createElement('div'); el.className = 'confetti-piece';
+    el.style.cssText = `left:${Math.random()*100}vw;background:${colors[Math.floor(Math.random()*colors.length)]};animation-delay:${Math.random()*1.5}s;animation-duration:${2+Math.random()}s;transform:rotate(${Math.random()*360}deg);`;
+    document.body.appendChild(el); setTimeout(()=>el.remove(),4000);
+  }
+}
+</script>
+</body>
+</html>

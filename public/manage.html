@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quiz Battle — Question Manager</title>
+<script src="/socket.io/socket.io.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#1db37e;--green-d:#0f8f5e;--red:#e8445a;--red-d:#b83347;
+  --blue:#3a8ef6;--blue-d:#1c6fd4;--amber:#f5a623;--purple:#7c5cbf;
+  --bg:#0f1923;--bg2:#172230;--bg3:#1f2e3e;--card:#1c2d3f;
+  --border:#2e4058;--text:#e8f0fa;--text2:#8ba3be;--text3:#5a7a9a;
+  --r:16px;--rs:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(30,100,180,.15),transparent 60%);pointer-events:none;}
+.app{position:relative;z-index:1;max-width:600px;margin:0 auto;padding:1.25rem 1rem 3rem;}
+
+/* HEADER */
+.header{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;}
+.header-title{font-family:'Fredoka One',cursive;font-size:24px;background:linear-gradient(135deg,#3a8ef6,#7c5cbf,#1db37e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.header-sub{font-size:11px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;}
+.back-btn{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:8px 14px;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+
+/* TABS */
+.tabs{display:flex;gap:6px;margin-bottom:1.25rem;overflow-x:auto;padding-bottom:4px;}
+.tab{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem;}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1rem;}
+
+/* INPUTS */
+.field{margin-bottom:.9rem;}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+input[type=text],textarea,select{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;color:var(--text);font-family:'Nunito',sans-serif;font-size:15px;font-weight:600;outline:none;transition:border-color .15s;resize:none;}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--blue);}
+input[type=text]::placeholder,textarea::placeholder{color:var(--text3);font-weight:400;}
+select option{background:var(--bg2);color:var(--text);}
+.options-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.option-wrap{position:relative;}
+.option-wrap input{padding-right:36px;}
+.correct-dot{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:2px solid var(--border);cursor:pointer;background:transparent;transition:all .15s;}
+.correct-dot.selected{background:var(--green);border-color:var(--green);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:var(--rs);border:none;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;}
+.btn:active{transform:scale(.96);}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+.btn-primary{background:var(--green);color:#fff;} .btn-primary:hover{background:var(--green-d);}
+.btn-danger{background:var(--red);color:#fff;} .btn-danger:hover{background:var(--red-d);}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border);}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-full{width:100%;padding:14px;border-radius:var(--r);font-size:15px;}
+.btn-sm{padding:7px 14px;font-size:12px;}
+
+/* QUESTION LIST */
+.q-list{display:flex;flex-direction:column;gap:8px;}
+.q-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;display:flex;align-items:flex-start;gap:10px;}
+.q-item.custom{border-color:rgba(29,179,126,.4);background:rgba(29,179,126,.05);}
+.q-item-body{flex:1;min-width:0;}
+.q-item-text{font-size:14px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:3px;}
+.q-item-ans{font-size:12px;color:var(--green);font-weight:700;}
+.q-item-tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.tag-custom{background:rgba(29,179,126,.2);color:#5fdbaa;}
+.tag-default{background:rgba(58,142,246,.15);color:#7fb8ff;}
+.del-btn{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:2px 4px;border-radius:6px;flex-shrink:0;line-height:1;}
+.del-btn:hover{color:var(--red);background:rgba(232,68,90,.1);}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:10px;margin-bottom:1rem;}
+.stat-box{flex:1;background:var(--bg3);border-radius:var(--rs);padding:.75rem;text-align:center;}
+.stat-num{font-family:'Fredoka One',cursive;font-size:24px;color:var(--blue);}
+.stat-label{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:#fff;font-weight:700;font-size:14px;padding:12px 24px;border-radius:30px;z-index:999;transition:transform .3s;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.error{background:var(--red);}
+
+/* EMPTY */
+.empty{text-align:center;padding:2rem 1rem;color:var(--text3);font-size:14px;}
+.empty-icon{font-size:40px;margin-bottom:.75rem;}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+.section-header h3{font-size:13px;font-weight:700;color:var(--text2);}
+
+hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="header-title">Question Manager</div>
+      <div class="header-sub">إدارة الأسئلة · Teacher Panel</div>
+    </div>
+    <button class="back-btn" onclick="window.location.href='teacher.html'">← Dashboard</button>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('vocab',this)">📚 Vocabulary</button>
+    <button class="tab" onclick="switchTab('spelling',this)">🔤 Spelling</button>
+    <button class="tab" onclick="switchTab('fillblank',this)">✏️ Fill Blank</button>
+    <button class="tab" onclick="switchTab('scramble',this)">🔀 Scramble</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-box"><div class="stat-num" id="stat-custom">0</div><div class="stat-label">Custom / مخصصة</div></div>
+    <div class="stat-box"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total / الإجمالي</div></div>
+  </div>
+
+  <!-- ADD FORM -->
+  <div class="card" id="add-form">
+    <div class="card-title" id="form-title">Add Vocabulary Question / أضف سؤال مفردات</div>
+
+    <!-- VOCAB FORM -->
+    <div id="form-vocab">
+      <div class="field">
+        <label>Question (English) / السؤال</label>
+        <input type="text" id="v-question" placeholder="e.g. What does 'serene' mean?">
+      </div>
+      <div class="field">
+        <label>Question (Arabic) / السؤال بالعربية</label>
+        <input type="text" id="v-question-ar" placeholder="ماذا تعني كلمة...؟" dir="rtl">
+      </div>
+      <div class="field">
+        <label>Answer / الإجابة</label>
+        <input type="text" id="v-answer" placeholder="e.g. Calm and peaceful">
+      </div>
+    </div>
+
+    <!-- SPELLING FORM -->
+    <div id="form-spelling" style="display:none;">
+      <div class="field">
+        <label>Word to Spell / الكلمة للتهجئة</label>
+        <input type="text" id="s-word" placeholder="e.g. necessary" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="field">
+        <label>Hint (English) / التلميح</label>
+        <input type="text" id="s-hint" placeholder="e.g. Required or needed">
+      </div>
+      <div class="field">
+        <label>Hint (Arabic) / التلميح بالعربية</label>
+        <input type="text" id="s-hint-ar" placeholder="ضروري / مطلوب" dir="rtl">
+      </div>
+    </div>
+
+    <!-- FILL BLANK FORM -->
+    <div id="form-fillblank" style="display:none;">
+      <div class="field">
+        <label>Sentence with ___ / الجملة مع ___</label>
+        <input type="text" id="f-question" placeholder="e.g. She has been here ___ 2020.">
+      </div>
+      <div class="field">
+        <label>Sentence (Arabic) / الجملة بالعربية</label>
+        <input type="text" id="f-question-ar" placeholder="ترجمة الجملة..." dir="rtl">
+      </div>
+      <div class="field">
+        <label>4 Options — tap ● to mark correct / اضغط ● للإجابة الصحيحة</label>
+        <div class="options-row">
+          <div class="option-wrap">
+            <input type="text" id="f-opt0" placeholder="Option 1">
+            <div class="correct-dot selected" id="dot0" onclick="selectCorrect(0)" title="Mark as correct"></div>
+          </div>
+          <div class="option-wrap">
+            <input type="text" id="f-opt1" placeholder="Option 2">
+            <div class="correct-dot" id="dot1" onclick="selectCorrect(1)"></div>
+          </div>
+          <div class="option-wrap">
+            <input type="text" id="f-opt2" placeholder="Option 3">
+            <div class="correct-dot" id="dot2" onclick="selectCorrect(2)"></div>
+          </div>
+          <div class="option-wrap">
+            <input type="text" id="f-opt3" placeholder="Option 4">
+            <div class="correct-dot" id="dot3" onclick="selectCorrect(3)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCRAMBLE FORM -->
+    <div id="form-scramble" style="display:none;">
+      <div class="field">
+        <label>Answer Word / الكلمة الصحيحة</label>
+        <input type="text" id="sc-answer" placeholder="e.g. BEAUTIFUL" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase();autoScramble()">
+      </div>
+      <div class="field">
+        <label>Scrambled Letters (auto-generated) / الحروف المبعثرة</label>
+        <input type="text" id="sc-scrambled" placeholder="Will auto-fill when you type above" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="field">
+        <label>Hint (English) / التلميح</label>
+        <input type="text" id="sc-hint" placeholder="e.g. Very pleasing to look at">
+      </div>
+      <div class="field">
+        <label>Hint (Arabic) / التلميح بالعربية</label>
+        <input type="text" id="sc-hint-ar" placeholder="جميل جداً للنظر..." dir="rtl">
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="addQuestion()">+ Add Question / أضف السؤال</button>
+  </div>
+
+  <!-- QUESTION LIST -->
+  <div class="card">
+    <div class="section-header">
+      <h3 id="list-title">All Questions / جميع الأسئلة</h3>
+      <button class="btn btn-ghost btn-sm" onclick="toggleShowAll()" id="toggle-btn">Show All</button>
+    </div>
+    <div class="q-list" id="q-list">
+      <div class="empty"><div class="empty-icon">📭</div>Loading questions...</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const socket = io();
+let currentTab = 'vocab';
+let correctOptionIndex = 0;
+let customQuestions = {};
+let defaultCounts = {};
+let showAll = false;
+
+socket.emit('teacher_join'); socket.emit('get_custom_questions');
+
+socket.on('custom_questions_update', (data) => {
+  customQuestions = data;
+  renderList();
+  updateStats();
+});
+
+socket.on('default_counts', (data) => {
+  defaultCounts = data;
+  updateStats();
+});
+
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('[id^="form-"]').forEach(f => f.style.display = 'none');
+  document.getElementById('form-' + tab).style.display = '';
+  const titles = { vocab:'Vocabulary / مفردات', spelling:'Spelling / تهجئة', fillblank:'Fill in the Blank / أكمل الفراغ', scramble:'Word Scramble / ترتيب الكلمات' };
+  document.getElementById('form-title').textContent = 'Add ' + titles[tab];
+  document.getElementById('list-title').textContent = titles[tab] + ' Questions';
+  showAll = false;
+  document.getElementById('toggle-btn').textContent = 'Show All';
+  renderList();
+  updateStats();
+}
+
+function selectCorrect(i) {
+  correctOptionIndex = i;
+  for (let j = 0; j < 4; j++) {
+    document.getElementById('dot' + j).className = 'correct-dot' + (j === i ? ' selected' : '');
+  }
+}
+
+function autoScramble() {
+  const word = document.getElementById('sc-answer').value.toUpperCase().replace(/[^A-Z]/g, '');
+  if (word.length < 2) { document.getElementById('sc-scrambled').value = ''; return; }
+  let arr = word.split('');
+  let scrambled;
+  let attempts = 0;
+  do {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    scrambled = arr.join('');
+    attempts++;
+  } while (scrambled === word && attempts < 20);
+  document.getElementById('sc-scrambled').value = scrambled;
+}
+
+function addQuestion() {
+  let q = null;
+  if (currentTab === 'vocab') {
+    const question = document.getElementById('v-question').value.trim();
+    const answer = document.getElementById('v-answer').value.trim();
+    const ar = document.getElementById('v-question-ar').value.trim();
+    if (!question || !answer) { showToast('Please fill Question and Answer! / أدخل السؤال والإجابة!', true); return; }
+    q = { q: question, a: answer, ar: ar || question };
+    clearInputs(['v-question','v-answer','v-question-ar']);
+  } else if (currentTab === 'spelling') {
+    const word = document.getElementById('s-word').value.trim().toUpperCase();
+    const hint = document.getElementById('s-hint').value.trim();
+    const hintAr = document.getElementById('s-hint-ar').value.trim();
+    if (!word || !hint) { showToast('Please fill Word and Hint! / أدخل الكلمة والتلميح!', true); return; }
+    q = { word, hint, ar: hintAr || hint };
+    clearInputs(['s-word','s-hint','s-hint-ar']);
+  } else if (currentTab === 'fillblank') {
+    const question = document.getElementById('f-question').value.trim();
+    const questionAr = document.getElementById('f-question-ar').value.trim();
+    const opts = [0,1,2,3].map(i => document.getElementById('f-opt'+i).value.trim());
+    if (!question || opts.some(o => !o)) { showToast('Fill all fields and 4 options! / أكمل جميع الحقول!', true); return; }
+    if (!question.includes('___')) { showToast('Sentence must include ___ / يجب أن تحتوي الجملة على ___', true); return; }
+    q = { q: question, a: opts[correctOptionIndex], options: opts, ar: questionAr || question };
+    clearInputs(['f-question','f-question-ar','f-opt0','f-opt1','f-opt2','f-opt3']);
+    selectCorrect(0);
+  } else if (currentTab === 'scramble') {
+    const answer = document.getElementById('sc-answer').value.trim().toUpperCase();
+    const scrambled = document.getElementById('sc-scrambled').value.trim().toUpperCase();
+    const hint = document.getElementById('sc-hint').value.trim();
+    const hintAr = document.getElementById('sc-hint-ar').value.trim();
+    if (!answer || !scrambled || !hint) { showToast('Fill Answer, Scrambled and Hint! / أدخل جميع الحقول!', true); return; }
+    q = { answer, scrambled, hint, ar: hintAr || hint };
+    clearInputs(['sc-answer','sc-scrambled','sc-hint','sc-hint-ar']);
+  }
+  if (q) {
+    socket.emit('add_custom_question', { game: currentTab, question: q });
+    showToast('✓ Question added! / تمت إضافة السؤال!');
+  }
+}
+
+function deleteQuestion(game, index) {
+  if (!confirm('Delete this question? / حذف هذا السؤال؟')) return;
+  socket.emit('delete_custom_question', { game, index });
+  showToast('Question deleted / تم الحذف');
+}
+
+function clearAllCustom() {
+  if (!confirm('Delete ALL custom questions for ' + currentTab + '? / حذف جميع الأسئلة المخصصة؟')) return;
+  socket.emit('clear_custom_questions', { game: currentTab });
+  showToast('All custom questions cleared / تم مسح جميع الأسئلة');
+}
+
+function toggleShowAll() {
+  showAll = !showAll;
+  document.getElementById('toggle-btn').textContent = showAll ? 'Show Custom Only' : 'Show All';
+  renderList();
+}
+
+function renderList() {
+  const list = document.getElementById('q-list');
+  const custom = (customQuestions[currentTab] || []);
+  let html = '';
+
+  if (custom.length > 0) {
+    html += `<div style="font-size:11px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">✨ Your Custom Questions (${custom.length})</div>`;
+    custom.forEach((q, i) => {
+      const text = q.q || q.word || q.answer || '';
+      const ans = q.a || q.word || q.answer || '';
+      html += `<div class="q-item custom">
+        <div class="q-item-body">
+          <span class="q-item-tag tag-custom">Custom</span>
+          <div class="q-item-text">${text}</div>
+          <div class="q-item-ans">✓ ${ans}</div>
+        </div>
+        <button class="del-btn" onclick="deleteQuestion('${currentTab}',${i})">🗑</button>
+      </div>`;
+    });
+    html += `<button class="btn btn-danger btn-sm" style="width:100%;margin-top:4px;" onclick="clearAllCustom()">🗑 Clear All Custom / مسح الكل</button>`;
+    html += `<hr>`;
+  }
+
+  if (showAll) {
+    html += `<div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📚 Built-in Questions (${defaultCounts[currentTab] || 0})</div>`;
+    html += `<div style="font-size:13px;color:var(--text3);text-align:center;padding:1rem 0;">Built-in questions are shown during gameplay.<br>Add custom ones above to mix them in!</div>`;
+  }
+
+  if (!html) {
+    html = `<div class="empty"><div class="empty-icon">📝</div><div>No custom questions yet.<br>Add your first one above!</div><div style="font-size:12px;margin-top:8px;color:var(--text3)">لا توجد أسئلة مخصصة بعد</div></div>`;
+  }
+
+  list.innerHTML = html;
+}
+
+function updateStats() {
+  const custom = (customQuestions[currentTab] || []).length;
+  const total = custom + (defaultCounts[currentTab] || 0);
+  document.getElementById('stat-custom').textContent = custom;
+  document.getElementById('stat-total').textContent = total;
+}
+
+function clearInputs(ids) { ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; }); }
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 2500);
+}
+</script>
+</body>
+</html>

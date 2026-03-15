@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quiz Battle — Student</title>
+<script src="/socket.io/socket.io.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#1db37e;--green-d:#0f8f5e;--red:#e8445a;--blue:#3a8ef6;
+  --amber:#f5a623;--purple:#7c5cbf;
+  --bg:#0f1923;--bg2:#172230;--bg3:#1f2e3e;--card:#1c2d3f;
+  --border:#2e4058;--text:#e8f0fa;--text2:#8ba3be;--text3:#5a7a9a;
+  --r:16px;--rs:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:stretch;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(30,100,180,.15),transparent 60%);pointer-events:none;}
+.app{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;padding:1.5rem 1.25rem;max-width:480px;margin:0 auto;width:100%;overflow-y:auto;}
+.screen{display:none;flex-direction:column;flex:1;animation:fi .3s ease;}
+.screen.active{display:flex;}
+@keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.logo{text-align:center;margin-bottom:1.5rem;}
+.logo-title{font-family:'Fredoka One',cursive;font-size:36px;background:linear-gradient(135deg,#3a8ef6,#7c5cbf,#1db37e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.logo-sub{font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem 1.5rem;margin-bottom:1rem;}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.75rem;}
+input[type=text]{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:14px 16px;color:var(--text);font-family:'Nunito',sans-serif;font-size:17px;font-weight:700;outline:none;transition:border-color .15s;}
+input[type=text]:focus{border-color:var(--blue);}
+input[type=text]::placeholder{color:var(--text3);font-weight:400;}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border-radius:var(--r);border:none;font-family:'Nunito',sans-serif;font-size:17px;font-weight:800;cursor:pointer;transition:all .15s;margin-bottom:.75rem;}
+.btn:active:not(:disabled){transform:scale(.96);}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;}
+.btn-primary{background:var(--green);color:#fff;}
+.btn-primary:hover:not(:disabled){background:var(--green-d);}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border);}
+.btn-blue{background:var(--blue);color:#fff;}
+.buzz-btn{background:var(--green);color:#fff;font-size:26px;padding:28px;border-radius:24px;letter-spacing:1px;box-shadow:0 4px 24px rgba(29,179,126,.3);}
+.buzz-btn:active{transform:scale(.93)!important;box-shadow:0 2px 10px rgba(29,179,126,.2);}
+.buzz-btn:disabled{background:var(--bg3);box-shadow:none;color:var(--text3);}
+.buzz-btn.buzzed-me{background:#0f8f5e;box-shadow:0 4px 24px rgba(29,179,126,.5);}
+.waiting{text-align:center;padding:2rem 0;color:var(--text3);}
+.waiting-icon{font-size:48px;animation:spin 3s linear infinite;}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.q-box{background:var(--bg2);border-radius:var(--r);padding:1.25rem;margin-bottom:1rem;text-align:center;}
+.q-text{font-size:19px;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:6px;}
+.q-ar{font-size:13px;color:var(--text3);direction:rtl;margin-bottom:8px;}
+.q-badge{display:inline-block;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;}
+.q-badge.vocab{background:rgba(58,142,246,.2);color:#7fb8ff;}
+.q-badge.spelling{background:rgba(124,92,191,.2);color:#b89fff;}
+.q-badge.fillblank{background:rgba(245,166,35,.2);color:#ffc96b;}
+.q-badge.scramble{background:rgba(29,179,126,.2);color:#5fdbaa;}
+.timer-bar-wrap{margin-bottom:1rem;}
+.timer-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.timer-num{font-family:'Fredoka One',cursive;font-size:24px;color:var(--text);}
+.timer-num.urgent{color:var(--red);animation:pulse .5s infinite alternate;}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.1)}}
+.timer-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;}
+.timer-fill{height:100%;background:var(--green);border-radius:4px;transition:width .9s linear,background .3s;}
+.timer-fill.urgent{background:var(--red);}
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem;}
+.opt-btn{padding:16px 10px;border-radius:var(--r);border:2px solid var(--border);background:var(--bg3);color:var(--text);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;}
+.opt-btn:active:not(:disabled){transform:scale(.96);}
+.opt-btn:disabled{opacity:.5;cursor:not-allowed;}
+.opt-btn.correct{border-color:var(--green);background:rgba(29,179,126,.2);color:#5fdbaa;}
+.opt-btn.wrong{border-color:var(--red);background:rgba(232,68,90,.15);color:#ff8fa0;}
+.status{text-align:center;font-size:14px;font-weight:700;color:var(--text2);min-height:22px;margin-bottom:.75rem;}
+.my-score{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:var(--rs);padding:.75rem 1rem;margin-bottom:1rem;}
+.my-score-label{font-size:12px;color:var(--text3);}
+.my-score-val{font-family:'Fredoka One',cursive;font-size:24px;color:var(--blue);}
+.my-lives{font-size:14px;letter-spacing:2px;}
+.result-hero{text-align:center;padding:2rem 0 1rem;}
+.result-trophy{font-size:56px;animation:bounce 1s infinite alternate;}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+.result-name{font-family:'Fredoka One',cursive;font-size:32px;background:linear-gradient(135deg,#ffd700,#f5a623);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.lb-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;}
+.lb-row:last-child{border-bottom:none;}
+.lb-rank-cell{font-family:'Fredoka One',cursive;font-size:18px;color:var(--text3);width:30px;}
+.lb-rank-cell.r1{color:#ffd700;}.lb-rank-cell.r2{color:#c0c0c0;}.lb-rank-cell.r3{color:#cd7f32;}
+.answer-reveal{margin-top:10px;padding:10px 14px;background:rgba(29,179,126,.15);border:1px solid rgba(29,179,126,.4);border-radius:var(--rs);font-size:15px;font-weight:700;color:#5fdbaa;display:none;}
+.err-msg{background:rgba(232,68,90,.15);border:1px solid rgba(232,68,90,.4);border-radius:var(--rs);padding:10px 14px;font-size:14px;color:#ff8fa0;margin-bottom:1rem;display:none;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- JOIN -->
+<div class="screen active" id="s-join">
+  <div class="logo">
+    <div class="logo-title">Quiz Battle</div>
+    <div class="logo-sub">Student / طالب</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Enter Your Name / أدخل اسمك</div>
+    <input type="text" id="name-input" placeholder="Your name / اسمك" maxlength="20" autocomplete="off">
+    <div style="height:12px;"></div>
+    <div class="err-msg" id="err-msg"></div>
+    <button class="btn btn-primary" onclick="joinGame()" style="margin-top:.5rem;">Join Game / انضم للعبة</button>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div class="screen" id="s-waiting">
+  <div class="logo"><div class="logo-title">Quiz Battle</div></div>
+  <div class="waiting">
+    <div class="waiting-icon">⏳</div>
+    <div style="margin-top:1rem;font-size:17px;font-weight:700;" id="wait-name"></div>
+    <div style="margin-top:8px;font-size:14px;color:var(--text3);">Waiting for teacher to start...</div>
+    <div style="font-size:13px;color:var(--text3);direction:rtl;margin-top:4px;">في انتظار المعلم للبدء...</div>
+  </div>
+</div>
+
+<!-- PLAY -->
+<div class="screen" id="s-play">
+  <div class="my-score">
+    <div><div class="my-score-label">My Score / نقاطي</div><div class="my-score-val" id="my-score">0</div></div>
+    <div class="my-lives" id="my-lives">❤️❤️❤️</div>
+  </div>
+  <div class="q-box" id="q-box">
+    <span class="q-badge vocab" id="q-badge">Vocabulary</span>
+    <div class="q-text" id="q-text">Get ready! / استعد!</div>
+    <div class="q-ar" id="q-ar"></div>
+    <div class="answer-reveal" id="answer-reveal"></div>
+  </div>
+  <div class="timer-bar-wrap" id="timer-wrap" style="display:none;">
+    <div class="timer-top">
+      <span style="font-size:12px;color:var(--text3);font-weight:700;">TIME / الوقت</span>
+      <span class="timer-num" id="timer-num">15</span>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%;"></div></div>
+  </div>
+  <div class="status" id="play-status"></div>
+
+  <!-- VOCAB: Buzz Button -->
+  <div id="vocab-controls" style="display:none;">
+    <button class="btn buzz-btn" id="buzz-btn" onclick="buzz()">🔔 BUZZ IN! / اضغط!</button>
+  </div>
+
+  <!-- FILL IN THE BLANK: Options -->
+  <div id="fill-controls" style="display:none;">
+    <div class="options-grid" id="options-grid"></div>
+  </div>
+
+  <!-- SPELLING / SCRAMBLE: Text Input -->
+  <div id="text-controls" style="display:none;">
+    <input type="text" id="text-answer" placeholder="Type your answer / اكتب إجابتك" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <button class="btn btn-blue" onclick="submitText()" style="margin-top:.75rem;" id="submit-btn">Submit / أرسل</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="screen" id="s-results">
+  <div class="result-hero">
+    <div class="result-trophy" id="res-trophy">🏆</div>
+    <div style="font-size:12px;color:var(--text3);letter-spacing:2px;margin-bottom:4px;" id="res-label">WINNER</div>
+    <div class="result-name" id="res-winner">—</div>
+    <div style="font-size:14px;color:var(--text2);margin-top:4px;" id="res-pts"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Leaderboard / الترتيب</div>
+    <div id="lb-list"></div>
+  </div>
+</div>
+
+</div>
+<script>
+const socket = io();
+let myName = '';
+let myScore = 0;
+let myLives = 3;
+let currentGame = '';
+let buzzed = false;
+let answered = false;
+let timerMax = 15;
+
+function joinGame() {
+  const val = document.getElementById('name-input').value.trim();
+  if (!val) { showErr('Please enter your name! / أدخل اسمك!'); return; }
+  myName = val;
+  socket.emit('student_join', { name: val });
+}
+
+socket.on('joined', ({ name }) => {
+  document.getElementById('wait-name').textContent = `👋 Welcome, ${name}! / أهلاً ${name}!`;
+  showScreen('s-waiting');
+});
+
+socket.on('error_msg', (msg) => { showErr(msg); });
+
+socket.on('game_started', ({ game }) => {
+  currentGame = game;
+  myScore = 0; myLives = 3;
+  updateMyScore();
+  const names = {vocab:'Vocabulary Quiz',spelling:'Spelling Bee',fillblank:'Fill in the Blank',scramble:'Word Scramble'};
+  const badge = document.getElementById('q-badge');
+  badge.textContent = names[game] || game; badge.className = `q-badge ${game}`;
+  document.getElementById('q-text').textContent = 'Game starting! / بدأت اللعبة!';
+  document.getElementById('q-ar').textContent = '';
+  document.getElementById('answer-reveal').style.display = 'none';
+  hideAllControls();
+  showScreen('s-play');
+});
+
+socket.on('question', (q) => {
+  buzzed = false; answered = false;
+  document.getElementById('answer-reveal').style.display = 'none';
+  document.getElementById('timer-wrap').style.display = '';
+  hideAllControls();
+
+  if (q.game === 'vocab') {
+    document.getElementById('q-text').textContent = q.question;
+    document.getElementById('q-ar').textContent = q.questionAr;
+    setPlayStatus('🔔 First to buzz wins! / أول من يضغط يفوز!');
+    const buzzBtn = document.getElementById('buzz-btn');
+    buzzBtn.disabled = false; buzzBtn.className = 'btn buzz-btn';
+    buzzBtn.textContent = '🔔 BUZZ IN! / اضغط!';
+    document.getElementById('vocab-controls').style.display = '';
+  } else if (q.game === 'spelling') {
+    document.getElementById('q-text').textContent = `Spell this word! / هجّئ هذه الكلمة!`;
+    document.getElementById('q-ar').textContent = `Hint: ${q.hint}  |  تلميح: ${q.hintAr}`;
+    document.getElementById('text-answer').value = '';
+    document.getElementById('submit-btn').disabled = false;
+    setPlayStatus('Type the correct spelling! / اكتب التهجئة الصحيحة!');
+    document.getElementById('text-controls').style.display = '';
+  } else if (q.game === 'fillblank') {
+    document.getElementById('q-text').textContent = q.question;
+    document.getElementById('q-ar').textContent = q.questionAr;
+    const grid = document.getElementById('options-grid');
+    grid.innerHTML = q.options.map(opt =>
+      `<button class="opt-btn" onclick="submitOption(this,'${opt}')">${opt}</button>`).join('');
+    setPlayStatus('Choose the correct answer! / اختر الإجابة الصحيحة!');
+    document.getElementById('fill-controls').style.display = '';
+  } else if (q.game === 'scramble') {
+    document.getElementById('q-text').textContent = `🔀 ${q.scrambled}`;
+    document.getElementById('q-ar').textContent = `Hint: ${q.hint}  |  تلميح: ${q.hintAr}`;
+    document.getElementById('text-answer').value = '';
+    document.getElementById('submit-btn').disabled = false;
+    setPlayStatus('Unscramble the letters! / رتب الحروف!');
+    document.getElementById('text-controls').style.display = '';
+  }
+});
+
+socket.on('timer', ({ left, max }) => {
+  timerMax = max;
+  document.getElementById('timer-num').textContent = left;
+  document.getElementById('timer-fill').style.width = Math.max(0,(left/max)*100)+'%';
+  const urgent = left <= 5;
+  document.getElementById('timer-num').className = 'timer-num'+(urgent?' urgent':'');
+  document.getElementById('timer-fill').className = 'timer-fill'+(urgent?' urgent':'');
+});
+
+socket.on('time_up', () => {
+  setPlayStatus('⏰ Time\'s up! / انتهى الوقت!');
+  disableAllControls();
+});
+
+socket.on('buzzed', ({ name, socketId }) => {
+  if (name === myName) {
+    setPlayStatus('🎤 You buzzed! Answer now! / أجب الآن!');
+    document.getElementById('buzz-btn').className = 'btn buzz-btn buzzed-me';
+    document.getElementById('buzz-btn').textContent = '🎤 YOU BUZZED! / أنت ضغطت!';
+  } else {
+    setPlayStatus(`🔔 ${name} buzzed first! / ضغط ${name} أولاً!`);
+    document.getElementById('buzz-btn').disabled = true;
+  }
+});
+
+socket.on('correct_answer', ({ name, answer }) => {
+  const isMe = name === myName;
+  if (isMe) { myScore += 10; updateMyScore(); }
+  setPlayStatus(isMe ? '🎉 Correct! +10 points! / صحيح! +10 نقاط!' : `✅ ${name} got it right!`);
+  document.getElementById('answer-reveal').textContent = '✓ ' + answer;
+  document.getElementById('answer-reveal').style.display = '';
+  disableAllControls();
+});
+
+socket.on('wrong_answer', () => {
+  setPlayStatus('❌ Wrong answer! / إجابة خاطئة!');
+});
+
+socket.on('wrong_buzz', ({ name }) => {
+  if (name === myName) {
+    myLives = Math.max(0, myLives - 1);
+    updateMyScore();
+    setPlayStatus('❌ Wrong! −1 life / خطأ! قلبت حياة');
+    document.getElementById('buzz-btn').disabled = false;
+    document.getElementById('buzz-btn').className = 'btn buzz-btn';
+    document.getElementById('buzz-btn').textContent = '🔔 BUZZ IN! / اضغط!';
+    buzzed = false;
+  } else {
+    setPlayStatus(`${name} was wrong! Buzz if you know it! / اضغط إذا كنت تعرف!`);
+    document.getElementById('buzz-btn').disabled = false;
+  }
+});
+
+socket.on('answer_revealed', ({ answer }) => {
+  document.getElementById('answer-reveal').textContent = '✓ ' + answer;
+  document.getElementById('answer-reveal').style.display = '';
+  disableAllControls();
+});
+
+socket.on('player_eliminated', ({ name }) => {
+  if (name === myName) {
+    setPlayStatus('💀 You are eliminated! / تم إقصاؤك!');
+    document.getElementById('my-lives').textContent = '💀';
+    disableAllControls();
+  }
+});
+
+socket.on('state_update', ({ players }) => {
+  const me = players?.find(p => p.name === myName);
+  if (me) {
+    myScore = me.score;
+    myLives = me.lives;
+    updateMyScore();
+    if (!me.active) disableAllControls();
+  }
+});
+
+socket.on('game_over', ({ leaderboard }) => {
+  if (leaderboard.length > 0) {
+    const winner = leaderboard[0];
+    const isMe = winner.name === myName;
+    document.getElementById('res-trophy').textContent = isMe ? '🏆' : '🎮';
+    document.getElementById('res-label').textContent = isMe ? 'YOU WIN! / أنت الفائز!' : 'WINNER / الفائز';
+    document.getElementById('res-winner').textContent = winner.name;
+    document.getElementById('res-pts').textContent = `${winner.score} points / نقطة`;
+    document.getElementById('lb-list').innerHTML = leaderboard.map((p,i) =>
+      `<div class="lb-row">
+        <span class="lb-rank-cell r${i+1}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</span>
+        <span style="font-weight:700;flex:1;padding:0 8px;${p.name===myName?'color:#5fdbaa':''}">${p.name}${p.name===myName?' (You)':''}</span>
+        <span style="font-family:'Fredoka One',cursive;font-size:18px;color:var(--blue);">${p.score}</span>
+      </div>`).join('');
+  }
+  showScreen('s-results');
+});
+
+socket.on('lobby_reset', () => {
+  myScore = 0; myLives = 3; buzzed = false; answered = false;
+  showScreen('s-join');
+});
+
+function buzz() {
+  if (buzzed) return;
+  buzzed = true;
+  socket.emit('buzz');
+  document.getElementById('buzz-btn').disabled = true;
+}
+
+function submitOption(btn, answer) {
+  if (answered) return;
+  answered = true;
+  document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+  socket.emit('submit_answer', { answer });
+  btn.classList.add('correct');
+}
+
+function submitText() {
+  if (answered) return;
+  const val = document.getElementById('text-answer').value.trim();
+  if (!val) return;
+  answered = true;
+  document.getElementById('submit-btn').disabled = true;
+  socket.emit('submit_answer', { answer: val });
+}
+
+function updateMyScore() {
+  document.getElementById('my-score').textContent = myScore;
+  document.getElementById('my-lives').textContent = myLives > 0 ? '❤️'.repeat(myLives) : '💀';
+}
+
+function hideAllControls() {
+  ['vocab-controls','fill-controls','text-controls'].forEach(id => document.getElementById(id).style.display = 'none');
+}
+
+function disableAllControls() {
+  document.getElementById('buzz-btn').disabled = true;
+  document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+  document.getElementById('submit-btn').disabled = true;
+}
+
+function setPlayStatus(msg) { document.getElementById('play-status').textContent = msg; }
+function showErr(msg) { const e = document.getElementById('err-msg'); e.textContent = msg; e.style.display = ''; setTimeout(()=>e.style.display='none',3000); }
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+</script>
+</body>
+</html>
