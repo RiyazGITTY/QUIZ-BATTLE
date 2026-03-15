@@ -364,7 +364,6 @@ io.on('connection', (socket) => {
     if (state.game === 'vocab') startTimer();
   });
 
-  
   socket.on('reveal_answer', () => {
     stopTimer();
     const q = state.questions[state.currentQ];
@@ -389,7 +388,9 @@ io.on('connection', (socket) => {
 
 // ── Teacher Auth ─────────────────────────────────────────────
 const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || 'teacher123';
+
 app.use(express.json());
+
 app.post('/auth', (req, res) => {
   const { password } = req.body;
   if (password === TEACHER_PASSWORD) {

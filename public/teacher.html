@@ -68,7 +68,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .q-badge.scramble{background:rgba(29,179,126,.2);color:#5fdbaa;}
 .q-text{font-size:19px;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:6px;}
 .q-ar{font-size:14px;color:var(--text3);direction:rtl;}
-.q-answer-box{margin-top:12px;padding:10px 16px;background:rgba(29,179,126,.15);border:1px solid rgba(29,179,126,.4);border-radius:var(--rs);font-size:16px;font-weight:700;color:#5fdbaa;display:none;}
+.q-answer-box{margin-top:12px;padding:10px 16px;background:rgba(29,179,126,.15);border:1px solid rgba(29,179,126,.4);border-radius:var(--rs);font-size:16px;font-weight:700;color:#5fdbaa;display:none;min-height:0;}
 .timer-wrap{margin-bottom:1rem;}
 .timer-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 .timer-num{font-family:'Fredoka One',cursive;font-size:26px;color:var(--text);}
@@ -123,7 +123,7 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
 </div>
 
 <!-- LOBBY -->
-<div class="screen active" id="s-lobby">
+<div class="screen" id="s-lobby">
   <div class="logo">
     <div class="logo-title">Quiz Battle</div>
     <div class="logo-sub">Teacher Dashboard · لوحة المعلم</div>
@@ -256,15 +256,15 @@ function login() {
     document.getElementById('pwd-err').style.display = '';
   });
 }
-// Load QR
+
 function initDashboard() {
   socket.emit('teacher_join');
-// Load QR
-fetch('/qr').then(r=>r.json()).then(d=>{
-  document.getElementById('qr-img').src = d.qr;
-  document.getElementById('qr-url').textContent = d.url;
-});
+  fetch('/qr').then(r=>r.json()).then(d=>{
+    document.getElementById('qr-img').src = d.qr;
+    document.getElementById('qr-url').textContent = d.url;
+  });
 }
+
 // Auto-login if already authenticated this session
 if (sessionStorage.getItem('teacher_auth') === '1') {
   showScreen('s-lobby');
@@ -369,7 +369,6 @@ socket.on('buzzed', ({ name, socketId }) => {
   document.getElementById('btn-reveal').style.display = '';
   document.getElementById('btn-next').style.display = 'none';
 });
-
 
 socket.on('correct_answer', ({ name, answer }) => {
   setStatus(`🎉 ${name} answered correctly! / أجاب ${name} بشكل صحيح!`);
