@@ -36,6 +36,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-amber{background:var(--amber);color:#fff;}
 .btn-full{width:100%;padding:15px;font-size:16px;border-radius:var(--r);}
 .game-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:1rem;}
+.cat-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer;transition:all .2s;text-align:center;}
+.cat-card:hover{border-color:var(--blue);transform:translateY(-2px);}
+.cat-card.active{border-color:var(--green);background:rgba(29,179,126,.1);}
+.cat-icon{font-size:28px;margin-bottom:6px;}
+.cat-name{font-weight:800;font-size:16px;color:var(--text);}
+.cat-sub{font-size:11px;color:var(--text3);margin-top:3px;font-weight:600;}
 @media(max-width:500px){.game-grid{grid-template-columns:1fr;}}
 .game-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--r);padding:1.25rem;cursor:pointer;transition:all .2s;text-align:center;}
 .game-card:hover{border-color:var(--blue);transform:translateY(-2px);}
@@ -177,7 +183,7 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
       ❌ Wrong password! / كلمة المرور خاطئة!
     </div>
     <button class="btn btn-primary btn-full" onclick="login()">🔓 Login / دخول</button>
-    <!-- <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:.75rem;">Default password: teacher123</p> -->
+    <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:.75rem;">Default password: teacher123</p>
   </div>
 </div>
 
@@ -217,39 +223,99 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
       </div>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">Choose Game / اختر اللعبة</div>
+  <!-- CATEGORY SELECTION -->
+  <div class="card" id="category-section">
+    <div class="card-title">Choose Category / اختر الفئة</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+      <!-- ENGLISH CATEGORY -->
+      <div class="cat-card active" id="cat-english" onclick="selectCategory('english')">
+        <div class="cat-icon">🇬🇧</div>
+        <div class="cat-name">English</div>
+        <div class="cat-sub">4 Games</div>
+      </div>
+
+      <!-- ISLAMIC CATEGORY -->
+      <div class="cat-card" id="cat-islamic" onclick="selectCategory('islamic')">
+        <div class="cat-icon">🕌</div>
+        <div class="cat-name">Islamic</div>
+        <div class="cat-sub" style="color:#f5a623;">Coming Soon</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ENGLISH GAMES -->
+  <div id="games-english">
+    <div class="card-title" style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.75rem;padding:0 .25rem;">🇬🇧 English Games</div>
     <div class="game-grid">
-      <div class="game-card selected" onclick="selectGame('vocab',this)">
+      <div class="game-card selected" id="gc-vocab" onclick="selectGame('vocab',this)">
         <div class="game-icon">📚</div>
         <div class="game-name">Vocabulary Quiz</div>
-        <div class="game-name-ar">مسابقة المفردات</div>
+        <div class="game-name-ar">Meanings & Synonyms</div>
       </div>
-      <div class="game-card" onclick="selectGame('spelling',this)">
+      <div class="game-card" id="gc-spelling" onclick="selectGame('spelling',this)">
         <div class="game-icon">🔤</div>
         <div class="game-name">Spelling Bee</div>
-        <div class="game-name-ar">مسابقة التهجئة</div>
+        <div class="game-name-ar">Spell it correctly!</div>
       </div>
-      <div class="game-card" onclick="selectGame('fillblank',this)">
+      <div class="game-card" id="gc-fillblank" onclick="selectGame('fillblank',this)">
         <div class="game-icon">✏️</div>
         <div class="game-name">Fill in the Blank</div>
-        <div class="game-name-ar">أكمل الفراغ</div>
+        <div class="game-name-ar">Choose the right word</div>
       </div>
-      <div class="game-card" onclick="selectGame('scramble',this)">
+      <div class="game-card" id="gc-scramble" onclick="selectGame('scramble',this)">
         <div class="game-icon">🔀</div>
         <div class="game-name">Word Scramble</div>
-        <div class="game-name-ar">ترتيب الكلمات</div>
-      </div>
-      <div class="game-card" style="border-color:rgba(255,215,0,.3);background:rgba(255,215,0,.04);grid-column:1/-1;cursor:not-allowed;opacity:0.75;position:relative;">
-        <div style="position:absolute;top:10px;right:12px;background:#f5a623;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;">Coming Soon</div>
-        <div class="game-icon">🕌</div>
-        <div class="game-name">Islamic Quiz</div>
-        <div class="game-name-ar" style="color:#c8a400;">Quran · Hadith · History · Pillars · Terms</div>
+        <div class="game-name-ar">Unscramble the letters</div>
       </div>
     </div>
   </div>
-  <button class="btn btn-primary btn-full" id="start-btn" onclick="startGame()" disabled>▶ Start Game / ابدأ اللعبة</button>
-<button class="btn btn-ghost" style="width:100%;margin-top:.5rem;" onclick="window.location.href='manage.html'">✏️ Manage Questions / إدارة الأسئلة</button>
+
+  <!-- ISLAMIC GAMES (hidden until active) -->
+  <div id="games-islamic" style="display:none;">
+    <div class="card-title" style="font-size:11px;font-weight:800;color:#c8a400;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:.75rem;padding:0 .25rem;">🕌 Islamic Quiz Games</div>
+    <div class="game-grid">
+      <div class="game-card coming" style="cursor:not-allowed;opacity:.6;position:relative;">
+        <div style="position:absolute;top:8px;right:8px;background:#f5a623;color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;">Soon</div>
+        <div class="game-icon">📖</div>
+        <div class="game-name">Quran Quiz</div>
+        <div class="game-name-ar">Surahs & Ayahs</div>
+      </div>
+      <div class="game-card coming" style="cursor:not-allowed;opacity:.6;position:relative;">
+        <div style="position:absolute;top:8px;right:8px;background:#f5a623;color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;">Soon</div>
+        <div class="game-icon">📜</div>
+        <div class="game-name">Hadith Quiz</div>
+        <div class="game-name-ar">Sunnah & Sayings</div>
+      </div>
+      <div class="game-card coming" style="cursor:not-allowed;opacity:.6;position:relative;">
+        <div style="position:absolute;top:8px;right:8px;background:#f5a623;color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;">Soon</div>
+        <div class="game-icon">🕋</div>
+        <div class="game-name">Pillars of Islam</div>
+        <div class="game-name-ar">5 Pillars & 6 Iman</div>
+      </div>
+      <div class="game-card coming" style="cursor:not-allowed;opacity:.6;position:relative;">
+        <div style="position:absolute;top:8px;right:8px;background:#f5a623;color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;">Soon</div>
+        <div class="game-icon">🌙</div>
+        <div class="game-name">Islamic History</div>
+        <div class="game-name-ar">Prophets & Companions</div>
+      </div>
+      <div class="game-card coming" style="cursor:not-allowed;opacity:.6;position:relative;grid-column:1/-1;">
+        <div style="position:absolute;top:8px;right:8px;background:#f5a623;color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px;">Soon</div>
+        <div class="game-icon">🌟</div>
+        <div class="game-name">Islamic Terms</div>
+        <div class="game-name-ar">Arabic terms & meanings</div>
+      </div>
+    </div>
+    <div style="text-align:center;padding:1rem;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.2);border-radius:var(--r);margin-top:.5rem;">
+      <div style="font-size:20px;">🕌</div>
+      <div style="font-size:13px;font-weight:700;color:#c8a400;margin-top:4px;">Islamic Quiz — Coming Soon!</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px;">All 5 Islamic game modes will be activated soon</div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-full" id="start-btn" onclick="startGame()" disabled style="margin-top:1rem;">▶ Start Game / ابدأ اللعبة</button>
+  <button class="btn btn-ghost" style="width:100%;margin-top:.5rem;" onclick="window.location.href='manage.html'">✏️ Manage Questions / إدارة الأسئلة</button>
 </div>
 
 <!-- GAME -->
@@ -341,11 +407,35 @@ if (sessionStorage.getItem('teacher_auth') === '1') {
   initDashboard();
 }
 
+function selectCategory(cat) {
+  // Update category cards
+  document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('cat-' + cat).classList.add('active');
+  // Show/hide game sections
+  document.getElementById('games-english').style.display = cat === 'english' ? '' : 'none';
+  document.getElementById('games-islamic').style.display = cat === 'islamic' ? '' : 'none';
+  // Reset game selection when switching category
+  if (cat === 'english') {
+    selectedGame = 'vocab';
+    document.querySelectorAll('.game-card').forEach(c => c.classList.remove('selected'));
+    const vocabCard = document.getElementById('gc-vocab');
+    if (vocabCard) vocabCard.classList.add('selected');
+    document.getElementById('start-btn').disabled = Object.keys(playerList).length < 1;
+  } else {
+    // Islamic is coming soon — disable start
+    document.querySelectorAll('.game-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('start-btn').disabled = true;
+  }
+}
+
 function selectGame(g, el) {
+  if (el.classList.contains('coming')) return;
   selectedGame = g;
   document.querySelectorAll('.game-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
 }
+
+let playerList = [];
 
 function startGame() {
   timerMax = parseInt(document.getElementById('timer-val').value);
@@ -358,9 +448,12 @@ function markCorrect() { socket.emit('mark_correct'); }
 function markWrong() { socket.emit('mark_wrong', { socketId: buzzedSocketId }); }
 
 socket.on('player_list', (names) => {
+  playerList = names;
   const chips = document.getElementById('lobby-chips');
   document.getElementById('player-count').textContent = `(${names.length})`;
-  document.getElementById('start-btn').disabled = names.length < 1;
+  // Only enable start if English category is selected (Islamic is coming soon)
+  const isEnglish = document.getElementById('cat-english').classList.contains('active');
+  document.getElementById('start-btn').disabled = names.length < 1 || !isEnglish;
   if (names.length === 0) {
     chips.innerHTML = '<span style="font-size:13px;color:var(--text3);">Waiting for students... / في انتظار الطلاب...</span>';
   } else {
