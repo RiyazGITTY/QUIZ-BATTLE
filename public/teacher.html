@@ -66,7 +66,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .q-badge.spelling{background:rgba(124,92,191,.2);color:#b89fff;}
 .q-badge.fillblank{background:rgba(245,166,35,.2);color:#ffc96b;}
 .q-badge.scramble{background:rgba(29,179,126,.2);color:#5fdbaa;}
-.q-badge.islamic{background:rgba(255,215,0,.15);color:#c8a400;}
 .q-text{font-size:19px;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:6px;}
 .q-ar{font-size:14px;color:var(--text3);direction:rtl;}
 .q-answer-box{margin-top:12px;padding:10px 16px;background:rgba(29,179,126,.15);border:1px solid rgba(29,179,126,.4);border-radius:var(--rs);font-size:16px;font-weight:700;color:#5fdbaa;display:none;min-height:0;}
@@ -176,11 +175,6 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
         <div class="game-icon">🔀</div>
         <div class="game-name">Word Scramble</div>
         <div class="game-name-ar">ترتيب الكلمات</div>
-      </div>
-      <div class="game-card" onclick="selectGame('islamic',this)" style="border-color:rgba(29,179,126,.4);background:rgba(29,179,126,.04);grid-column:1/-1;">
-        <div class="game-icon">🕌</div>
-        <div class="game-name">Islamic Quiz</div>
-        <div class="game-name-ar" style="color:#5fdbaa;">Quran · Hadith · History · Pillars · Terms</div>
       </div>
     </div>
   </div>
@@ -345,13 +339,8 @@ socket.on('question', (q) => {
     setStatus('Students are choosing answers... / الطلاب يختارون...');
   } else if (q.game === 'scramble') {
     document.getElementById('q-text').textContent = `Unscramble: ${q.scrambled}`;
-    document.getElementById('q-ar').textContent = `Hint: ${q.hint}`;
+    document.getElementById('q-ar').textContent = `تلميح: ${q.hintAr}`;
     setStatus('Students are unscrambling... / الطلاب يرتبون الكلمة...');
-  } else if (q.game === 'islamic') {
-    const catNames = { quran:'📖 Quran', hadith:'📜 Hadith & Sunnah', history:'🕌 Islamic History', pillars:'🕋 Pillars of Islam', terms:'🌙 Islamic Terms', general:'☪️ Islamic Quiz' };
-    document.getElementById('q-text').textContent = q.question;
-    document.getElementById('q-ar').textContent = catNames[q.category] || '☪️ Islamic Quiz';
-    setStatus('Who buzzes first? 🔔');
   }
 });
 
