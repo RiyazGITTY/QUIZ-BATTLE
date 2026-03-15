@@ -385,11 +385,10 @@ io.on('connection', (socket) => {
 });
 
 app.get('/qr', async (req, res) => {
-  // Use Railway public URL if available, else local IP
-  const host = process.env.RAILWAY_PUBLIC_DOMAIN
-    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-    : `http://${getLocalIP()}:${PORT}`;
-  const url = `${host}/student.html`;
+  // Auto-detect host from request headers — works on Railway, local, everywhere
+  const proto = req.headers['x-forwarded-proto'] || 'http';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || (getLocalIP() + ':' + PORT);
+  const url = proto + '://' + host + '/student.html';
   try {
     const qr = await QRCode.toDataURL(url, { width: 300, margin: 2, color: { dark: '#0f1923', light: '#ffffff' } });
     res.json({ qr, url });
