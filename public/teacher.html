@@ -370,11 +370,14 @@ socket.on('buzzed', ({ name, socketId }) => {
   document.getElementById('btn-next').style.display = 'none';
 });
 
+
 socket.on('correct_answer', ({ name, answer }) => {
   setStatus(`🎉 ${name} answered correctly! / أجاب ${name} بشكل صحيح!`);
-  document.getElementById('q-answer').textContent = '✓ Answer: ' + answer;
-  document.getElementById('q-answer').style.display = '';
-  document.getElementById('btn-next').style.display = '';
+  const box = document.getElementById('q-answer');
+  box.textContent = '✓ Answer: ' + answer;
+  box.style.cssText += ';display:block!important;';
+  document.getElementById('btn-next').style.display = 'inline-flex';
+  document.getElementById('btn-reveal').style.display = 'none';
   document.getElementById('btn-correct').style.display = 'none';
   document.getElementById('btn-wrong').style.display = 'none';
 });
@@ -386,9 +389,12 @@ socket.on('wrong_buzz', ({ name }) => {
 });
 
 socket.on('answer_revealed', ({ answer }) => {
-  document.getElementById('q-answer').textContent = '✓ Answer: ' + answer;
-  document.getElementById('q-answer').style.display = '';
-  document.getElementById('btn-next').style.display = '';
+  const box = document.getElementById('q-answer');
+  box.textContent = '✓ Answer: ' + answer;
+  box.style.display = 'block';
+  box.style.cssText += ';display:block!important;';
+  document.getElementById('btn-next').style.display = 'inline-flex';
+  document.getElementById('btn-reveal').style.display = 'none';
   document.getElementById('btn-correct').style.display = 'none';
   document.getElementById('btn-wrong').style.display = 'none';
 });

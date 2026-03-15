@@ -364,10 +364,13 @@ io.on('connection', (socket) => {
     if (state.game === 'vocab') startTimer();
   });
 
+  
   socket.on('reveal_answer', () => {
     stopTimer();
     const q = state.questions[state.currentQ];
-    io.emit('answer_revealed', { answer: q.answer || q.a || q.word });
+    if (!q) { socket.emit('error_msg', 'No question loaded yet'); return; }
+    const answer = q.answer || q.a || q.word || 'N/A';
+    io.emit('answer_revealed', { answer });
     state.buzzed = null; broadcastState();
   });
 
