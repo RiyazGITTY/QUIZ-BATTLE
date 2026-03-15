@@ -183,9 +183,14 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
 
 <!-- LOBBY -->
 <div class="screen" id="s-lobby">
-  <div class="logo">
-    <div class="logo-title">Quiz Battle</div>
-    <div class="logo-sub">Teacher Dashboard · لوحة المعلم</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+    <div>
+      <div class="logo-title" style="font-family:'Fredoka One',cursive;font-size:32px;background:linear-gradient(135deg,#3a8ef6,#7c5cbf,#1db37e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Quiz Battle</div>
+      <div style="font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;">Teacher Dashboard · لوحة المعلم</div>
+    </div>
+    <button onclick="logout()" style="display:flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--rs);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(232,68,90,.15)';this.style.color='#e8445a';this.style.borderColor='rgba(232,68,90,.4)';" onmouseout="this.style.background='var(--bg3)';this.style.color='var(--text2)';this.style.borderColor='var(--border)';">
+      🔒 Logout
+    </button>
   </div>
   <div class="two-col">
     <div class="card">
@@ -502,6 +507,14 @@ socket.on('lobby_reset', () => {
   document.getElementById('start-btn').disabled = true;
   showScreen('s-lobby');
 });
+
+function logout() {
+  if (!confirm('Are you sure you want to logout? / هل تريد تسجيل الخروج؟')) return;
+  sessionStorage.removeItem('teacher_auth');
+  showScreen('s-login');
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('pwd-err').style.display = 'none';
+}
 
 function setStatus(msg) { document.getElementById('status-msg').textContent = msg; }
 function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
