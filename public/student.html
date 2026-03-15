@@ -53,6 +53,7 @@ input[type=text]::placeholder{color:var(--text3);font-weight:400;}
 .q-badge.spelling{background:rgba(124,92,191,.2);color:#b89fff;}
 .q-badge.fillblank{background:rgba(245,166,35,.2);color:#ffc96b;}
 .q-badge.scramble{background:rgba(29,179,126,.2);color:#5fdbaa;}
+.q-badge.islamic{background:rgba(255,215,0,.15);color:#c8a400;}
 .timer-bar-wrap{margin-bottom:1rem;}
 .timer-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 .timer-num{font-family:'Fredoka One',cursive;font-size:24px;color:var(--text);}
@@ -211,7 +212,7 @@ socket.on('game_started', ({ game }) => {
   currentGame = game;
   myScore = 0; myLives = 3;
   updateMyScore();
-  const names = {vocab:'Vocabulary Quiz',spelling:'Spelling Bee',fillblank:'Fill in the Blank',scramble:'Word Scramble'};
+  const names = {vocab:'Vocabulary Quiz',spelling:'Spelling Bee',fillblank:'Fill in the Blank',scramble:'Word Scramble',islamic:'Islamic Quiz'};
   const badge = document.getElementById('q-badge');
   badge.textContent = names[game] || game; badge.className = `q-badge ${game}`;
   document.getElementById('q-text').textContent = 'Game starting! / بدأت اللعبة!';
@@ -252,11 +253,23 @@ socket.on('question', (q) => {
     document.getElementById('fill-controls').style.display = '';
   } else if (q.game === 'scramble') {
     document.getElementById('q-text').textContent = `🔀 ${q.scrambled}`;
-    document.getElementById('q-ar').textContent = `Hint: ${q.hint}  |  تلميح: ${q.hintAr}`;
+    document.getElementById('q-ar').textContent = `Hint: ${q.hint}`;
     document.getElementById('text-answer').value = '';
     document.getElementById('submit-btn').disabled = false;
-    setPlayStatus('Unscramble the letters! / رتب الحروف!');
+    setPlayStatus('Unscramble the letters!');
     document.getElementById('text-controls').style.display = '';
+  } else if (q.game === 'islamic') {
+    const catNames = { quran:'📖 Quran', hadith:'📜 Hadith', history:'🕌 History', pillars:'🕋 Pillars', terms:'🌙 Terms', general:'☪️ Islamic' };
+    const badge = document.getElementById('q-badge');
+    badge.textContent = catNames[q.category] || '☪️ Islamic';
+    badge.className = 'q-badge islamic';
+    document.getElementById('q-text').textContent = q.question;
+    document.getElementById('q-ar').textContent = '';
+    setPlayStatus('🔔 First to buzz wins!');
+    const buzzBtn = document.getElementById('buzz-btn');
+    buzzBtn.disabled = false; buzzBtn.className = 'btn buzz-btn';
+    buzzBtn.textContent = '🔔 BUZZ IN!';
+    document.getElementById('vocab-controls').style.display = '';
   }
 });
 

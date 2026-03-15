@@ -111,6 +111,7 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
     <button class="tab" onclick="switchTab('spelling',this)">🔤 Spelling</button>
     <button class="tab" onclick="switchTab('fillblank',this)">✏️ Fill Blank</button>
     <button class="tab" onclick="switchTab('scramble',this)">🔀 Scramble</button>
+    <button class="tab" onclick="switchTab('islamic',this)">🕌 Islamic</button>
   </div>
 
   <!-- STATS -->
@@ -188,6 +189,28 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
       </div>
     </div>
 
+    <!-- ISLAMIC FORM -->
+    <div id="form-islamic" style="display:none;">
+      <div class="field">
+        <label>Question</label>
+        <input type="text" id="is-question" placeholder="e.g. What is the first Surah of the Quran?">
+      </div>
+      <div class="field">
+        <label>Answer</label>
+        <input type="text" id="is-answer" placeholder="e.g. Al-Fatiha (The Opening)">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="is-category">
+          <option value="quran">📖 Quran</option>
+          <option value="hadith">📜 Hadith & Sunnah</option>
+          <option value="history">🕌 Islamic History</option>
+          <option value="pillars">🕋 Pillars of Islam & Iman</option>
+          <option value="terms">🌙 Islamic Terms</option>
+        </select>
+      </div>
+    </div>
+
     <!-- SCRAMBLE FORM -->
     <div id="form-scramble" style="display:none;">
       <div class="field">
@@ -257,7 +280,7 @@ function switchTab(tab, el) {
   el.classList.add('active');
   document.querySelectorAll('[id^="form-"]').forEach(f => f.style.display = 'none');
   document.getElementById('form-' + tab).style.display = '';
-  const titles = { vocab:'Vocabulary / مفردات', spelling:'Spelling / تهجئة', fillblank:'Fill in the Blank / أكمل الفراغ', scramble:'Word Scramble / ترتيب الكلمات' };
+  const titles = { vocab:'Vocabulary / مفردات', spelling:'Spelling / تهجئة', fillblank:'Fill in the Blank / أكمل الفراغ', scramble:'Word Scramble / ترتيب الكلمات', islamic:'Islamic Quiz 🕌' };
   document.getElementById('form-title').textContent = 'Add ' + titles[tab];
   document.getElementById('list-title').textContent = titles[tab] + ' Questions';
   showAll = false;
@@ -315,6 +338,13 @@ function addQuestion() {
     q = { q: question, a: opts[correctOptionIndex], options: opts, ar: questionAr || question };
     clearInputs(['f-question','f-question-ar','f-opt0','f-opt1','f-opt2','f-opt3']);
     selectCorrect(0);
+  } else if (currentTab === 'islamic') {
+    const question = document.getElementById('is-question').value.trim();
+    const answer = document.getElementById('is-answer').value.trim();
+    const category = document.getElementById('is-category').value;
+    if (!question || !answer) { showToast('Please fill Question and Answer!', true); return; }
+    q = { q: question, a: answer, category };
+    clearInputs(['is-question','is-answer']);
   } else if (currentTab === 'scramble') {
     const answer = document.getElementById('sc-answer').value.trim().toUpperCase();
     const scrambled = document.getElementById('sc-scrambled').value.trim().toUpperCase();
@@ -356,7 +386,7 @@ function renderList() {
   if (custom.length > 0) {
     html += `<div style="font-size:11px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">✨ Your Custom Questions (${custom.length})</div>`;
     custom.forEach((q, i) => {
-      const text = q.q || q.word || q.answer || '';
+      const text = q.q || q.word || q.answer || q.scrambled || '';
       const ans = q.a || q.word || q.answer || '';
       html += `<div class="q-item custom">
         <div class="q-item-body">
