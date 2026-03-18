@@ -7,10 +7,15 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: { origin: '*', methods: ['GET','POST'] },
+  transports: ['websocket','polling'],
+  allowEIO3: true,
+});
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
+
 
 const QUESTIONS = {
   vocab: [
@@ -226,8 +231,11 @@ const QUESTIONS = {
 let usedQuestions = { vocab: new Set(), spelling: new Set(), fillblank: new Set(), scramble: new Set() };
 let customQuestions = { vocab: [], spelling: [], fillblank: [], scramble: [] };
 
-function getUniqueQuestions(game, count) {
-  const pool = [...QUESTIONS[game], ...customQuestions[game]];
+function getUniqueQuestions(game, count, source) {
+  const builtIn = source === 'custom' ? [] : (QUESTIONS[game] || []);
+  const custom = customQuestions[game] || [];
+  const pool = [...builtIn, ...custom];
+  if (pool.length === 0) return [];
   const used = usedQuestions[game];
   if (used.size >= pool.length) usedQuestions[game] = new Set();
   const available = pool.map((q, i) => ({ q, i })).filter(({ i }) => !usedQuestions[game].has(i));
@@ -267,10 +275,17 @@ function sendQuestion() {
   state.buzzed = null;
   Object.values(state.players).forEach(p => p.answered = false);
   let payload = { index: state.currentQ, total: state.questions.length, game: state.game };
-  if (state.game === 'vocab') { payload.question = q.q; payload.questionAr = q.ar; payload.answer = q.a; }
-  else if (state.game === 'spelling') { payload.hint = q.hint; payload.hintAr = q.ar; payload.answer = q.word; }
-  else if (state.game === 'fillblank') { payload.question = q.q; payload.questionAr = q.ar; payload.options = q.options; payload.answer = q.a; }
-  else if (state.game === 'scramble') { payload.scrambled = q.scrambled; payload.hint = q.hint; payload.hintAr = q.ar; payload.answer = q.answer; }
+  if (state.game === 'vocab') {
+    payload.question = q.q; payload.answer = q.a;
+  } else if (state.game === 'spelling') {
+    payload.hint = q.hint; payload.answer = q.word;
+  } else if (state.game === 'fillblank') {
+    payload.question = q.q; payload.options = q.options; payload.answer = q.a;
+  } else if (state.game === 'scramble') {
+    payload.scrambled = q.scrambled; payload.hint = q.hint; payload.answer = q.answer;
+  } else if (state.game === 'islamic') {
+    payload.question = q.q; payload.answer = q.a; payload.category = q.category || 'general';
+  }
   io.emit('question', payload);
   broadcastState();
   startTimer();
@@ -309,11 +324,17 @@ io.on('connection', (socket) => {
     broadcastState();
   });
 
-  socket.on('start_game', ({ game, timerMax, questionCount }) => {
+  socket.on('start_game', ({ game, timerMax, questionCount, source }) => {
     if (Object.keys(state.players).length < 1) return;
+    const src = source || 'all';
+    if (src === 'custom' && (customQuestions[game] || []).length === 0) {
+      socket.emit('error_msg', 'No custom questions found! Add questions in Manage Questions first.');
+      return;
+    }
+    const questions = getUniqueQuestions(game, questionCount || 10, src);
+    if (questions.length === 0) { socket.emit('error_msg', 'No questions available! Please add questions first.'); return; }
     state.game = game; state.phase = 'playing'; state.timerMax = timerMax || 15;
-    state.questions = getUniqueQuestions(game, questionCount || 10);
-    state.currentQ = -1;
+    state.questions = questions; state.currentQ = -1;
     Object.values(state.players).forEach(p => { p.score = 0; p.lives = 3; p.active = true; });
     io.emit('game_started', { game }); broadcastState();
   });
