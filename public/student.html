@@ -1,4 +1,4 @@
-ur<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -197,6 +197,41 @@ let currentGame = '';
 let buzzed = false;
 let answered = false;
 let timerMax = 15;
+let isConnected = false;
+
+// Connection status
+socket.on('connect', () => {
+  isConnected = true;
+  // Update connection indicator to green
+  const dot = document.getElementById('conn-dot');
+  const text = document.getElementById('conn-text');
+  const status = document.getElementById('conn-status');
+  const btn = document.getElementById('join-btn');
+  if (dot) { dot.style.background = '#1db37e'; }
+  if (text) { text.textContent = 'Connected! Ready to join.'; text.style.color = '#1db37e'; }
+  if (status) { status.style.background = 'rgba(29,179,126,.1)'; status.style.borderColor = 'rgba(29,179,126,.3)'; }
+  if (btn) btn.disabled = false;
+  console.log('Connected to server ✅');
+});
+
+socket.on('disconnect', () => {
+  isConnected = false;
+  const dot = document.getElementById('conn-dot');
+  const text = document.getElementById('conn-text');
+  const status = document.getElementById('conn-status');
+  const btn = document.getElementById('join-btn');
+  if (dot) { dot.style.background = '#e8445a'; }
+  if (text) { text.textContent = 'Disconnected! Reconnecting...'; text.style.color = '#e8445a'; }
+  if (status) { status.style.background = 'rgba(232,68,90,.1)'; status.style.borderColor = 'rgba(232,68,90,.3)'; }
+  if (btn) btn.disabled = true;
+  console.log('Disconnected ❌');
+});
+
+socket.on('connect_error', (err) => {
+  const text = document.getElementById('conn-text');
+  if (text) { text.textContent = 'Connection failed! Try refreshing.'; }
+  console.log('Connection error:', err);
+});
 
 function joinGame() {
   const val = document.getElementById('name-input').value.trim();
