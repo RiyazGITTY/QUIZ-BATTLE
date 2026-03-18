@@ -37,6 +37,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-full{width:100%;padding:15px;font-size:16px;border-radius:var(--r);}
 .game-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:1rem;}
 .cat-card{background:var(--bg3);border:2px solid var(--border);border-radius:var(--r);padding:1rem;cursor:pointer;transition:all .2s;text-align:center;}
+.src-btn{flex:1;padding:9px 10px;border-radius:var(--rs);border:1.5px solid var(--border);background:var(--bg3);color:var(--text2);font-family:"Nunito",sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center;}
+.src-btn:hover{border-color:var(--blue);color:var(--text);}
+.src-btn.active{border-color:var(--green);background:rgba(29,179,126,.15);color:#5fdbaa;}
 .cat-card:hover{border-color:var(--blue);transform:translateY(-2px);}
 .cat-card.active{border-color:var(--green);background:rgba(29,179,126,.1);}
 .cat-icon{font-size:28px;margin-bottom:6px;}
@@ -219,6 +222,22 @@ hr{border:none;border-top:1px solid var(--border);margin:1rem 0;}
           <span class="setting-label">Timer / المؤقت</span>
           <input type="range" min="10" max="30" value="15" step="5" id="timer-val" oninput="document.getElementById('timer-out').textContent=this.value+'s'">
           <span class="setting-val" id="timer-out">15s</span>
+        </div>
+        <div class="setting-row" style="align-items:flex-start;flex-direction:column;gap:8px;">
+          <span class="setting-label" style="min-width:unset;">Question Source</span>
+          <div style="display:flex;gap:8px;width:100%;">
+            <button class="src-btn active" id="src-all" onclick="setSource('all')">
+              📚 All Questions
+            </button>
+            <button class="src-btn" id="src-custom" onclick="setSource('custom')">
+              ✨ Custom Only
+            </button>
+          </div>
+        </div>
+        <!-- Warning: no custom questions -->
+        <div id="no-custom-warn" style="display:none;margin-top:.5rem;padding:10px 12px;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.35);border-radius:10px;">
+          <div style="font-size:13px;font-weight:700;color:#f5a623;">⚠️ No custom questions yet!</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px;">Go to <b style="color:var(--text2);">Manage Questions</b> to add your own questions first.</div>
         </div>
       </div>
     </div>
@@ -433,13 +452,52 @@ function selectGame(g, el) {
   selectedGame = g;
   document.querySelectorAll('.game-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
+  checkCustomWarning();
 }
 
 let playerList = [];
+  let questionSource = 'all'; // 'all' or 'custom'
+let customQCounts = { vocab:0, spelling:0, fillblank:0, scramble:0, islamic:0 };
+
+function setSource(src) {
+  questionSource = src;
+  document.querySelectorAll('.src-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('src-' + src).classList.add('active');
+  checkCustomWarning();
+}
+
+function checkCustomWarning() {
+  if (questionSource !== 'custom') {
+    document.getElementById('no-custom-warn').style.display = 'none';
+    document.getElementById('start-btn').disabled = playerList.length < 1;
+    return;
+  }
+  const count = customQCounts[selectedGame] || 0;
+  const warn = document.getElementById('no-custom-warn');
+  if (count === 0) {
+    warn.style.display = '';
+    document.getElementById('start-btn').disabled = true;
+  } else {
+    warn.style.display = 'none';
+    document.getElementById('start-btn').disabled = playerList.length < 1;
+  }
+}
+
+// Listen for custom question counts from server
+socket.on('custom_questions_update', (data) => {
+  customQCounts = {
+    vocab: (data.vocab || []).length,
+    spelling: (data.spelling || []).length,
+    fillblank: (data.fillblank || []).length,
+    scramble: (data.scramble || []).length,
+    islamic: (data.islamic || []).length,
+  };
+  checkCustomWarning();
+});
 
 function startGame() {
   timerMax = parseInt(document.getElementById('timer-val').value);
-  socket.emit('start_game', { game: selectedGame, timerMax, questionCount: 10 });
+  socket.emit('start_game', { game: selectedGame, timerMax, questionCount: 10, source: questionSource });
 }
 
 function nextQ() { socket.emit('next_question'); }
@@ -593,7 +651,7 @@ socket.on('game_over', ({ leaderboard }) => {
   showScreen('s-results');
   launchConfetti();
 });
-
+socket.on('error_msg', (msg) => { alert('⚠️ ' + msg); });
 socket.on('lobby_reset', () => {
   document.getElementById('lobby-chips').innerHTML = '<span style="font-size:13px;color:var(--text3);">Waiting for students...</span>';
   document.getElementById('player-count').textContent = '(0)';
